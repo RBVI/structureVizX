@@ -195,7 +195,7 @@ public abstract class CytoUtils {
 	static CyProperty<Properties> getPropertyService(CyServiceRegistrar registrar,
 	                                                 SavePolicy policy) {
 		if (policy.equals(SavePolicy.CONFIG_DIR) || policy.equals(SavePolicy.SESSION_FILE_AND_CONFIG_DIR)) {
-			String name = "structureViz";
+			String name = "structureVizX";
 			CyProperty<Properties> service = new ConfigPropsReader(policy, name);
 			Properties serviceProps = new Properties();
 			serviceProps.setProperty("cyPropertyName", service.getName());

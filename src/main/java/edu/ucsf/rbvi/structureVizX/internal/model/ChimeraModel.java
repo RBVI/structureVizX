@@ -15,6 +15,8 @@ import org.cytoscape.model.CyIdentifiable;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 
+import org.slf4j.LoggerFactory;
+
 import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager.ModelType;
 
 /**
@@ -29,7 +31,7 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	private String name; // The name of this model
 	private ModelType type; // The type of the model
 	private int modelNumber; // The model number
-	private int subModelNumber; // The sub-model number
+	private String[] subModelIds; // sub-model identifiers for this residue
 
 	private Color modelColor = null; // The color of this model (from Chimera)
 	private Object userData = null; // User data associated with this model
@@ -52,15 +54,19 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	 * @param subModelNumber
 	 *            the sub-model number
 	 */
-	public ChimeraModel(String name, ModelType type, int modelNumber, int subModelNumber) {
+	public ChimeraModel(String name, ModelType type, int modelNumber, String[] subModelIds) {
 		this.name = name;
 		this.type = type;
 		this.modelNumber = modelNumber;
-		this.subModelNumber = subModelNumber;
+		this.subModelIds = subModelIds;
 
 		this.chainMap = new TreeMap<String, ChimeraChain>();
 		this.cyObjects = new HashMap<CyIdentifiable, CyNetwork>();
 		this.funcResidues = new HashSet<ChimeraResidue>();
+	}
+
+	public ChimeraModel(AtomSpec spec) {
+		specInit(spec);
 	}
 
 	/**
@@ -71,17 +77,23 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	 */
 	// TODO: [Optional] How to distinguish between PDB and MODBASE?
 	// invoked when listing models: listm type molecule; lists level molecule
-	// line = model id #0 type Molecule name 1ert
+	// line = model id #0 type AtomicStructure name 1ert
 	public ChimeraModel(String inputLine) {
-		this.name = ChimUtils.parseModelName(inputLine);
+		AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, null);
+		specInit(spec);
+	}
+
+	private void specInit(AtomSpec spec) {
 		// TODO: [Optional] Write a separate method to get model type
-		if (name.startsWith("smiles")) {
+		if (spec.getName().startsWith("smiles")) {
 			this.type = ModelType.SMILES;
 		} else {
 			this.type = ModelType.PDB_MODEL;
 		}
-		this.modelNumber = ChimUtils.parseModelNumber(inputLine)[0];
-		this.subModelNumber = ChimUtils.parseModelNumber(inputLine)[1];
+
+		this.name = spec.getName();
+		this.modelNumber = spec.getModelNumber();
+		this.subModelIds = spec.getSubModelIds();
 
 		this.chainMap = new TreeMap<String, ChimeraChain>();
 		this.cyObjects = new HashMap<CyIdentifiable, CyNetwork>();
@@ -119,7 +131,7 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	public void addResidue(String chainId, ChimeraResidue residue) {
 		ChimeraChain chain = null;
 		if (!chainMap.containsKey(chainId)) {
-			chain = new ChimeraChain(this.modelNumber, this.subModelNumber, chainId);
+			chain = new ChimeraChain(this.modelNumber, this.subModelIds, chainId);
 			chain.setChimeraModel(this);
 			chainMap.put(chainId, chain);
 		} else {
@@ -195,12 +207,29 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	}
 
 	/**
-	 * Get the sub-model number of this model
+	 * Get the sub-model information for this model
 	 * 
-	 * @return integer sub-model number
+	 * @return submodels
 	 */
-	public int getSubModelNumber() {
-		return subModelNumber;
+	public String[] getSubModelIds() {
+		return subModelIds;
+	}
+
+	/**
+	 * Get the sub-model information for this model
+	 * 
+	 * @return submodels
+	 */
+	public String getSubModelString() {
+		String subString = "";
+		if (subModelIds == null || subModelIds.length == 0)
+			return subString;
+
+		for (String sub: subModelIds) {
+			subString = "."+sub;
+		}
+
+		return subString;
 	}
 
 	/**
@@ -209,8 +238,8 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	 * @param subModelNumber
 	 *            integer model number
 	 */
-	public void setSubModelNumber(int subModelNumber) {
-		this.subModelNumber = subModelNumber;
+	public void setSubModelIds(String[] subModelIds) {
+		this.subModelIds = subModelIds;
 	}
 
 	public ModelType getModelType() {
@@ -443,13 +472,20 @@ public class ChimeraModel implements ChimeraStructuralObject {
 		}
 	}
 
+	public AtomSpec toAtomSpec() {
+		return AtomSpec.getAtomSpec(this);
+	}
+
 	/**
 	 * Return the Chimera specification for this model.
 	 */
 	public String toSpec() {
-		if (subModelNumber == 0)
+		if (subModelIds == null || subModelIds.length == 0)
 			return ("#" + modelNumber);
-		return ("#" + modelNumber + "." + subModelNumber);
+		String model = "#" + modelNumber;
+		for (String submodel: subModelIds)
+			model += "."+submodel;
+		return model;
 	}
 
 	/**

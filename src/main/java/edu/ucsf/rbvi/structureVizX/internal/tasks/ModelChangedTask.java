@@ -11,7 +11,7 @@ public class ModelChangedTask extends AbstractTask {
 	static boolean modelUpdaterRunning = false;
 
 	@Tunable(description="Data from Chimera")
-	public String chimeraNotification = "";
+	public String chimerax_notification = "";
 
 	public ModelChangedTask(StructureManager structureManager) {
 		this.structureManager = structureManager;

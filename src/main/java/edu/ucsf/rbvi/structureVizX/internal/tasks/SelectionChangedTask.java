@@ -11,7 +11,7 @@ public class SelectionChangedTask extends AbstractTask {
 	static boolean selectionUpdaterRunning = false;
 
 	@Tunable(description="Data from Chimera")
-	public String chimeraNotification = "";
+	public String chimerax_notification = "";
 
 	public SelectionChangedTask(StructureManager structureManager) {
 		this.structureManager = structureManager;

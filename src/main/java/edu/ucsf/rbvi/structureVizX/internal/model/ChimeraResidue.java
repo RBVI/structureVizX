@@ -34,6 +34,7 @@ package edu.ucsf.rbvi.structureVizX.internal.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,7 +59,7 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	private String index; // Residue index
 	private String chainId; // ChainID for this residue
 	private int modelNumber; // model number for this residue
-	private int subModelNumber; // sub-model number for this residue
+	private String[] subModelIds; // sub-model identifiers for this residue
 	protected int residueNumber;
 	protected String insertionCode;
 	private ChimeraModel chimeraModel; // ChimeraModel the residue is part of
@@ -79,7 +80,7 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 *          the model number this residue is part of
 	 */
 	public ChimeraResidue(String type, String index, int modelNumber) {
-		this(type, index, modelNumber, 0);
+		this(type, index, modelNumber, null);
 	}
 
 	/**
@@ -94,15 +95,27 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 * @param subModelNumber
 	 *          the sub-model number this residue is part of
 	 */
-	public ChimeraResidue(String type, String index, int modelNumber, int subModelNumber) {
+	public ChimeraResidue(String type, String index, int modelNumber, String[] subModelIds) {
 		this.type = type;
 		this.index = index;
 		this.modelNumber = modelNumber;
-		this.subModelNumber = subModelNumber;
+		this.subModelIds = subModelIds;
 		splitInsertionCode(this.index);
 		// if (aaNames == null) {
 		// initNames();
 		// }
+	}
+
+	// How does ChimeraX handle insertion codes?
+	public ChimeraResidue(AtomSpec spec) {
+		this.type = spec.getResidueType();
+		this.index = spec.getResidueIndex();
+		this.residueNumber = spec.getResidueNumber();
+		this.modelNumber = spec.getModelNumber();
+		this.subModelIds = spec.getSubModelIds();
+		this.chainId = spec.getChainId();
+		if (this.index != null)
+			splitInsertionCode(this.index);
 	}
 
 	/**
@@ -111,45 +124,47 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 * @param chimeraInputLine
 	 *          a Chimera residue description
 	 */
-	// invoked when listing (selected) residues: listr spec #0; lists level residue
-	// Line: residue id #0:37.A type MET
+	// invoked when listing (selected) residues: listr spec #1; lists level residue
+	// Line: residue id #1.1/A:37 type MET
 	public ChimeraResidue(String chimeraInputLine) {
 		// initNames();
-		String[] split1 = chimeraInputLine.split(":");
+		String[] split1 = chimeraInputLine.split(":",2);
 
-		// First half has model number -- get the number
-		int numberOffset = split1[0].indexOf('#');
-		String model = split1[0].substring(numberOffset + 1);
-		int decimalOffset = model.indexOf('.'); // Do we have a sub-model?
-		try {
-			this.subModelNumber = 0;
-			if (decimalOffset > 0) {
-				this.subModelNumber = Integer.parseInt(model.substring(decimalOffset + 1));
-				this.modelNumber = Integer.parseInt(model.substring(0, decimalOffset));
-			} else {
-				this.modelNumber = Integer.parseInt(model);
+		String modelPart = split1[0];
+		String residuePart = split1[1];
+		// First half has model number(s) and chain -- get the chain
+		if (modelPart.indexOf('/') > 0) {
+			String[] split2 = modelPart.split("/");
+			chainId = split2[1];
+			modelPart = split1[0];
+		} else {
+			chainId = "_";
+		}
+
+		Object[] models = ChimUtils.parseModelNumber(modelPart);
+		if (models == null) {
+				LoggerFactory.getLogger(edu.ucsf.rbvi.structureVizX.internal.model.ChimeraResidue.class)
+					.error("Unexpected return from Chimera: " + modelPart);
+				this.modelNumber = -1;
+				return;
+		}
+
+		this.modelNumber = ((Integer)models[0]).intValue();
+
+		if (models.length > 1) {
+			subModelIds = new String[models.length-1];
+			for (int i = 1; i < models.length; i++) {
+				subModelIds[i-1] = (String)models[i];
 			}
-		} catch (Exception e) {
-			LoggerFactory.getLogger(edu.ucsf.rbvi.structureVizX.internal.model.ChimeraResidue.class)
-					.error("Unexpected return from Chimera: " + model);
-			this.modelNumber = -1;
+		} else {
+			subModelIds = null;
 		}
 
 		// Second half has residue info: index & type
 		String[] rTokens = split1[1].split(" ");
 		this.type = rTokens[2];
 
-		String[] iTokens = rTokens[0].split("\\.");
-		if (iTokens.length > 0) {
-			this.index = iTokens[0];
-
-			// Careful, might or might not have a chainID
-			if (iTokens.length > 1)
-				this.chainId = iTokens[1];
-			else
-				this.chainId = "_";
-		} else
-			this.index = rTokens[0];
+		this.index = rTokens[0];
 
 		splitInsertionCode(this.index);
 	}
@@ -195,6 +210,10 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 		return toString();
 	}
 
+	public AtomSpec toAtomSpec() {
+		return AtomSpec.getAtomSpec(this);
+	}
+
 	/**
 	 * Return the string representation of this residue as follows: "<i>residue_name</i> <i>index</i>"
 	 * where <i>residue_name</i> could be either the single letter, three letter, or full name
@@ -220,10 +239,15 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 * @return Chimera specification
 	 */
 	public String toSpec() {
+		String model = "#" + modelNumber;
+		if (subModelIds != null && subModelIds.length > 0) {
+			for (String submodel: subModelIds)
+				model += "."+submodel;
+		}
 		if (!chainId.equals("_"))
-			return ("#" + modelNumber + ":" + index + "." + chainId);
+			return (model + "/" + chainId + ":" + index);
 		else
-			return ("#" + modelNumber + ":" + index + ".");
+			return (model + ":" + index);
 	}
 
 	/**
@@ -233,6 +257,14 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 */
 	public String getIndex() {
 		return this.index;
+	}
+
+	public int getResidueNumber() {
+		return this.residueNumber;
+	}
+
+	public String getInsertionCode() {
+		return this.insertionCode;
 	}
 
 	/**
@@ -267,8 +299,8 @@ public class ChimeraResidue implements ChimeraStructuralObject, Comparable<Chime
 	 * 
 	 * @return the sub-model number
 	 */
-	public int getSubModelNumber() {
-		return this.subModelNumber;
+	public String[] getSubModelIds() {
+		return this.subModelIds;
 	}
 
 	/**

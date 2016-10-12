@@ -149,9 +149,11 @@ public class StructureManager {
 					// open and return models
 					currentModels = chimeraManager.openModel(chimObjName, type);
 					if (currentModels == null) {
+						System.out.println("openModel returns null!");
 						// failed to open model, continue with next
 						continue;
 					}
+					System.out.println("openModel returns "+currentModels.size()+" models");
 					// if (type == ModelType.SMILES) {
 					// newModels.put("smiles:" + chimObjName, currentModels);
 					// } else {
@@ -229,9 +231,11 @@ public class StructureManager {
 					// open and return models
 					currentModels = chimeraManager.openModel(chimObjName, type);
 					if (currentModels == null) {
+						System.out.println("openModel returns null!");
 						// failed to open model, continue with next
 						continue;
 					}
+					System.out.println("openModel returns "+currentModels.size()+" models");
 					// if (type == ModelType.SMILES) {
 					// newModels.put("smiles:" + chimObjName, currentModels);
 					// } else {
@@ -239,6 +243,7 @@ public class StructureManager {
 					// }
 					// for each model
 					for (ChimeraModel currentModel : currentModels) {
+						// System.out.println("Looking at "+currentModel);
 						// check if it is a RIN
 						boolean foundRIN = false;
 						if (currentModel.getModelType().equals(ModelType.PDB_MODEL)) {
@@ -278,14 +283,16 @@ public class StructureManager {
 								}
 							}
 						}
+
+						if (!currentChimMap.containsKey(currentModel)) {
+							currentChimMap.put(currentModel, new HashSet<CyIdentifiable>());
+						}
+
 						if (foundRIN) {
 							continue;
 						}
 						// if not RIN then associate new model with the Cytoscape
 						// node
-						if (!currentChimMap.containsKey(currentModel)) {
-							currentChimMap.put(currentModel, new HashSet<CyIdentifiable>());
-						}
 						String cyObjName = network.getRow(cyObj).get(CyNetwork.NAME, String.class);
 						if (cyObjName != null && cyObjName.endsWith(currentModel.getModelName())) {
 							// it is a modbase model, associate directly
@@ -300,7 +307,7 @@ public class StructureManager {
 										&& resSpec.equals(currentModel.getModelName())) {
 									specModel = chimeraManager.getChimeraModel(
 											currentModel.getModelNumber(),
-											currentModel.getSubModelNumber());
+											currentModel.getSubModelIds());
 								}
 								if (specModel != null
 										&& currentModel.toSpec().equals(specModel.toSpec())
@@ -580,18 +587,24 @@ public class StructureManager {
 	// Save models in a HashMap/Set for better performance?
 	public void updateChimeraSelection() {
 		// System.out.println("update Chimera selection");
-		String selSpec = "";
+		List<AtomSpec> specList = new ArrayList<AtomSpec>();
 		for (int i = 0; i < chimSelectionList.size(); i++) {
 			ChimeraStructuralObject nodeInfo = chimSelectionList.get(i);
+			specList.add(nodeInfo.toAtomSpec());
+			/*
+			// System.out.println("Adding "+nodeInfo.toSpec()+" ("+nodeInfo+") to selection");
 			// we do not care about the model anymore
 			selSpec = selSpec.concat(nodeInfo.toSpec());
 			if (i < chimSelectionList.size() - 1)
-				selSpec.concat("|");
+				selSpec = selSpec.concat("|");
+			*/
 		}
-		if (selSpec.length() > 0) {
-			chimera.select("sel " + selSpec);
+
+		if (specList.size() > 0) {
+			// System.out.println("Selecting "+selSpec);
+			chimera.select("sel", specList);
 		} else {
-			chimera.select("~sel");
+			chimera.select("~sel", specList);
 		}
 	}
 
@@ -604,18 +617,17 @@ public class StructureManager {
 		// System.out.println("Chimera selection changed");
 		clearSelectionList();
 		// Execute the command to get the list of models with selections
-		Map<Integer, ChimeraModel> selectedModelsMap = chimeraManager.getSelectedModels();
+		Map<String, ChimeraModel> selectedModelsMap = chimeraManager.getSelectedModels();
 		// Now get the residue-level data
 		chimeraManager.getSelectedResidues(selectedModelsMap);
 		// Get the selected objects
 		try {
 			for (ChimeraModel selectedModel : selectedModelsMap.values()) {
 				int modelNumber = selectedModel.getModelNumber();
-				int subModelNumber = selectedModel.getSubModelNumber();
+				String[] subModelIds = selectedModel.getSubModelIds();
 				// Get the corresponding "real" model
-				if (chimeraManager.hasChimeraModel(modelNumber, subModelNumber)) {
-					ChimeraModel dataModel = chimeraManager.getChimeraModel(modelNumber,
-							subModelNumber);
+				if (chimeraManager.hasChimeraModel(modelNumber, subModelIds)) {
+					ChimeraModel dataModel = chimeraManager.getChimeraModel(modelNumber, subModelIds);
 					if (dataModel.getResidueCount() == selectedModel.getResidueCount()
 							|| dataModel.getModelType() == StructureManager.ModelType.SMILES) {
 						// Select the entire model
@@ -624,6 +636,8 @@ public class StructureManager {
 					} else {
 						for (ChimeraChain selectedChain : selectedModel.getChains()) {
 							ChimeraChain dataChain = dataModel.getChain(selectedChain.getChainId());
+							System.out.println("dataChain has "+dataChain.getResidueCount()+" residues and "
+							                   +"selectedChain has "+selectedChain.getResidueCount()+" residues");
 							if (selectedChain.getResidueCount() == dataChain.getResidueCount()) {
 								addChimSelection(dataChain);
 								// dataChain.setSelected(true);
@@ -632,8 +646,10 @@ public class StructureManager {
 							// Need to select individual residues
 							for (ChimeraResidue res : selectedChain.getResidues()) {
 								String residueIndex = res.getIndex();
+								// System.out.println("Looking at residue '"+res.toSpec()+" with index "+residueIndex);
 								ChimeraResidue residue = dataChain.getResidue(residueIndex);
 								if (residue == null) {
+									// System.out.println("Can't find it");
 									continue;
 								}
 								addChimSelection(residue);
@@ -857,13 +873,13 @@ public class StructureManager {
 
 			// Get our model info
 			int modelNumber = newModel.getModelNumber();
-			int subModelNumber = newModel.getSubModelNumber();
+			String[] subModelIds = newModel.getSubModelIds();
 
 			// If we already know about this model number, get the Structure,
 			// which tells us about the associated CyNode
-			if (chimeraManager.hasChimeraModel(modelNumber, subModelNumber)) {
-				ChimeraModel oldModel = chimeraManager.getChimeraModel(modelNumber, subModelNumber);
-				chimeraManager.removeChimeraModel(modelNumber, subModelNumber);
+			if (chimeraManager.hasChimeraModel(modelNumber, subModelIds)) {
+				ChimeraModel oldModel = chimeraManager.getChimeraModel(modelNumber, subModelIds);
+				chimeraManager.removeChimeraModel(modelNumber, subModelIds);
 				newModel.setModelType(oldModel.getModelType());
 				if (oldModel.getModelType() == ModelType.SMILES) {
 					newModel.setModelName(oldModel.getModelName());
@@ -887,7 +903,7 @@ public class StructureManager {
 				}
 			}
 			// add new model to ChimeraManager
-			chimeraManager.addChimeraModel(modelNumber, subModelNumber, newModel);
+			chimeraManager.addChimeraModel(modelNumber, subModelIds, newModel);
 
 			// Get the residue information
 			if (newModel.getModelType() != ModelType.SMILES) {
@@ -930,6 +946,15 @@ public class StructureManager {
 			return true;
 		}
 		return false;
+	}
+
+	public void initChimera(int port, boolean launchDialog) {
+		if (chimera.initChimera(port)) {
+			if (launchDialog)
+				launchModelNavigatorDialog();
+			updateModels();
+			modelChanged();
+		}
 	}
 
 	/**
@@ -1060,7 +1085,7 @@ public class StructureManager {
 					cellList.add("smiles:" + key);
 				}
 			} else {
-				cellList = ChimUtils.getStructureKeys(table, cyObj, attrsFound);
+				cellList = ChimUtils.getStructureKeys(table, cyObj, attrsFound, this);
 			}
 			for (String cell : cellList) {
 				// skip if the structure is already open
@@ -1240,14 +1265,14 @@ public class StructureManager {
 		// if no user settings and no last path, get default system's settings
 		String os = System.getProperty("os.name");
 		if (os.startsWith("Linux")) {
-			pathList.add("/usr/local/chimera/bin/chimera");
-			pathList.add("/usr/local/bin/chimera");
-			pathList.add("/usr/bin/chimera");
+			pathList.add("/usr/local/chimera/bin/ChimeraX");
+			pathList.add("/usr/local/bin/ChimeraX");
+			pathList.add("/usr/bin/ChimeraX");
 		} else if (os.startsWith("Windows")) {
-			pathList.add("\\Program Files\\Chimera\\bin\\chimera");
-			pathList.add("C:\\Program Files\\Chimera\\bin\\chimera.exe");
+			pathList.add("\\Program Files\\ChimeraX\\bin\\ChimeraX");
+			pathList.add("C:\\Program Files\\ChimeraX\\bin\\ChimeraX.exe");
 		} else if (os.startsWith("Mac")) {
-			pathList.add("/Applications/Chimera.app/Contents/MacOS/chimera");
+			pathList.add("/Applications/ChimeraX.app/Contents/MacOS/ChimeraX");
 		}
 		return pathList;
 	}
@@ -1299,6 +1324,18 @@ public class StructureManager {
 			}
 		}
 		return residueList;
+	}
+
+	public void logError(String errMessage) {
+		logger.error("structureVizX: "+errMessage);
+	}
+
+	public void logWarning(String errMessage) {
+		logger.warn("structureVizX: "+errMessage);
+	}
+
+	public void logInfo(String errMessage) {
+		logger.info("structureVizX: "+errMessage);
 	}
 
 	class AssociationTask extends Thread {
@@ -1367,8 +1404,10 @@ public class StructureManager {
 							// && network.getDefaultNodeTable().getColumn(ChimUtils.RESIDUE_ATTR)
 							// .getType() == String.class
 							for (String resSpec : specsFound) {
-								ChimeraStructuralObject residue = ChimUtils.fromAttribute(resSpec,
-										chimeraManager);
+								// System.out.println("Looking at: "+resSpec);
+								ChimeraStructuralObject residue = 
+												ChimUtils.fromAttribute(resSpec, chimeraManager);
+								// System.out.println("Got residue: "+residue);
 								if (residue != null
 										&& (residue instanceof ChimeraResidue || residue instanceof ChimeraChain)
 										&& residue.getChimeraModel().getModelName()

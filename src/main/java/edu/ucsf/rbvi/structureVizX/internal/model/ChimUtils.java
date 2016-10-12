@@ -33,91 +33,44 @@ public abstract class ChimUtils {
 	 */
 	// invoked by the ChimeraModel constructor
 	// line = model id #0 type Molecule name 1ert
-	public static int[] parseModelNumber(String inputLine) {
+	public static Object[] parseModelNumber(String inputLine) {
+		Object[] results;
+
 		int hash = inputLine.indexOf('#');
 		int space = inputLine.indexOf(' ', hash);
-		int decimal = inputLine.substring(hash + 1, space).indexOf('.');
-		// model number is between hash+1 and space
-		int modelNumber = -1;
-		int subModelNumber = 0;
-		try {
-			if (decimal > 0) {
-				subModelNumber = Integer.parseInt(inputLine.substring(decimal + hash + 2, space));
-				space = decimal + hash + 1;
+		if (space <= 0) // Don't have ' ' in string
+			space = inputLine.length();
+		String[] submodels = inputLine.substring(hash+1, space).split(".");
+		String model = submodels[0];
+		if (submodels.length > 1) {
+			results = new Object[submodels.length];
+			for (int i = 1; i < submodels.length; i++) {
+				results[i] = submodels[i];
 			}
-			modelNumber = Integer.parseInt(inputLine.substring(hash + 1, space));
-		} catch (Exception e) {
-			logger.warn("Unexpected return from Chimera: " + inputLine, e);
-		}
-		return new int[] { modelNumber, subModelNumber };
-	}
-
-	/**
-	 * Parse the model number returned by Chimera and return the int value
-	 */
-	// invoked by openModel in ChimeraManager
-	// line: #1, chain A: hiv-1 protease
-	// line: Model 0 (filename)
-	public static int[] parseOpenedModelNumber(String inputLine) {
-		int hash = inputLine.indexOf('#');
-		int space = -1;
-		if (hash == (-1)) {
-			hash = inputLine.indexOf("Model");
-			if (hash >= 0) {
-				hash = hash+5;
-			}
-			space = inputLine.indexOf(' ', hash+1);
 		} else {
-			space = inputLine.indexOf(',', hash);
+			results = new Object[1];
 		}
-
-		int decimal = inputLine.substring(hash + 1, space).indexOf('.');
-		// model number is between hash+1 and space
-		int modelNumber = -1;
-		int subModelNumber = 0;
+		Integer modelNumber = null;
 		try {
-			if (decimal > 0) {
-				subModelNumber = Integer.parseInt(inputLine.substring(decimal + hash + 2, space));
-				space = decimal + hash + 1;
-			}
-			modelNumber = Integer.parseInt(inputLine.substring(hash + 1, space));
+			modelNumber = Integer.parseInt(model);
 		} catch (Exception e) {
 			logger.warn("Unexpected return from Chimera: " + inputLine, e);
-		}
-		return new int[] { modelNumber, subModelNumber };
-	}
-
-	/**
-	 * Parse the model identifier returned by Chimera and return the String value
-	 */
-	// invoked by the ChimeraModel constructor
-	// line = model id #0 type Molecule name 1ert
-	public static String parseModelName(String inputLine) {
-		int start = inputLine.indexOf("name ");
-		if (start < 0)
 			return null;
-		// Might get a quoted string (don't understand why, but there you have it)
-		if (inputLine.startsWith("\"", start + 5)) {
-			start += 6; // Skip over the first quote
-			int end = inputLine.lastIndexOf('"');
-			if (end >= 1) {
-				return inputLine.substring(start, end);
-			} else
-				return inputLine.substring(start);
-		} else {
-			return inputLine.substring(start + 5);
 		}
+
+		results[0] = modelNumber;
+		return results;
 	}
 
 	public static Color parseModelColor(String inputLine) {
 		try {
 			int colorStart = inputLine.indexOf("color ");
 			String colorString = inputLine.substring(colorStart + 6);
+			// System.out.println("Color: "+colorString);
 			String[] rgbStrings = colorString.split(",");
-			float[] rgbValues = new float[4];
+			int[] rgbValues = new int[4];
 			for (int i = 0; i < rgbStrings.length; i++) {
-				Float f = new Float(rgbStrings[i]);
-				rgbValues[i] = f.floatValue();
+				rgbValues[i] = Integer.valueOf(rgbStrings[i]);
 			}
 			if (rgbStrings.length == 4) {
 				return new Color(rgbValues[0], rgbValues[1], rgbValues[2], rgbValues[3]);
@@ -139,81 +92,51 @@ public abstract class ChimUtils {
 	 *            the submodel number
 	 * @return the model key as an Integer
 	 */
-	public static Integer makeModelKey(int model, int subModel) {
-		return new Integer(model * MAX_SUB_MODELS + subModel);
+	public static String makeModelKey(int model, String[] subModels) {
+		String modelKey = ""+model;
+		if (subModels == null || subModels.length == 0) return modelKey;
+		for (String sub: subModels)
+			modelKey = "."+sub;
+
+		return modelKey;
 	}
 
 	// invoked by the getResdiue (parseConnectivityReplies in CreateStructureNetworkTask)
 	// atomSpec = #0:1.A or #1:96.B@N
 	public static ChimeraModel getModel(String atomSpec, ChimeraManager chimeraManager) {
 		// System.out.println("getting model for "+atomSpec);
-		String[] split = atomSpec.split(":");
-		// No model specified....
-		if (split[0].length() == 0) {
-			logger.info("Unexpected return from Chimera: " + atomSpec);
-			return null;
-		}
-		// System.out.println("model = "+split[0].substring(1));
-		int model = 0;
-		int submodel = 0;
-		try {
-			String[] subSplit = split[0].substring(1).split("\\.");
-			if (subSplit.length > 0)
-				model = Integer.parseInt(subSplit[0]);
-			else
-				model = Integer.parseInt(split[0].substring(1));
-
-			if (subSplit.length > 1)
-				submodel = Integer.parseInt(subSplit[1]);
-		} catch (Exception e) {
-			// ignore
-			logger.warn("Unexpected return from Chimera: " + atomSpec, e);
-		}
-		return chimeraManager.getChimeraModel(model, submodel);
+		AtomSpec spec = AtomSpec.getChimeraXAtomSpec(atomSpec, chimeraManager.getStructureManager());
+		return chimeraManager.getChimeraModel(spec);
 	}
 
 	// invoked by the parseConnectivityReplies in CreateStructureNetworkTask
 	// atomSpec = #0:1.A or #1:96.B@N
 	public static ChimeraResidue getResidue(String atomSpec, ChimeraManager chimeraManager) {
 		// System.out.println("Getting residue from: "+atomSpec);
-		ChimeraModel model = getModel(atomSpec, chimeraManager); // Get the model
+		AtomSpec spec = AtomSpec.getChimeraXAtomSpec(atomSpec, chimeraManager.getStructureManager());
+		ChimeraModel model = chimeraManager.getChimeraModel(spec);
 		if (model == null) {
 			model = chimeraManager.getChimeraModel();
 		}
-		return getResidue(atomSpec, model);
+		String chain = "_";
+		if (spec.getChainId() != null)
+			chain = spec.getChainId();
+		return model.getResidue(chain, spec.getResidueIndex());
 	}
 
-	// invoked by the getResdiue (parseConnectivityReplies in CreateStructureNetworkTask)
+	// invoked by the parseConnectivityReplies in CreateStructureNetworkTask
 	// atomSpec = #0:1.A or #1:96.B@N
-	public static ChimeraResidue getResidue(String atomSpec, ChimeraModel model) {
-		// System.out.println("Getting residue from: "+atomSpec);
-		String[] split = atomSpec.split(":|@");
-
-		// Split into residue and chain
-		String[] residueChain = split[1].split("\\.");
-
-		if (residueChain[0].length() == 0) {
-			logger.info("Unexpected return from Chimera: " + atomSpec);
-			return null;
-		}
-
-		if (residueChain.length == 2 && residueChain[1].length() > 0) {
-			ChimeraChain chain = model.getChain(residueChain[1]);
-			return chain.getResidue(residueChain[0]);
-		}
-		return model.getResidue("_", residueChain[0]);
+	public static ChimeraResidue getResidue(String atomSpec, ChimeraModel model, ChimeraManager chimeraManager) {
+		AtomSpec spec = AtomSpec.getChimeraXAtomSpec(atomSpec, chimeraManager.getStructureManager());
+		return getResidue(spec, model, chimeraManager);
 	}
 
-	public static ChimeraChain getChain(String atomSpec, ChimeraModel model) {
-		String[] split = atomSpec.split(":|@");
-
-		// Split into residue and chain
-		String[] residueChain = split[1].split("\\.");
-		if (residueChain.length == 1) {
-			logger.info("Unexpected return from Chimera: " + atomSpec);
-			return null;
-		}
-		return model.getChain(residueChain[1]);
+	public static ChimeraResidue getResidue(AtomSpec spec, ChimeraModel model, 
+	                                        ChimeraManager chimeraManager) {
+		String chain = "_";
+		if (spec.getChainId() != null)
+			chain = spec.getChainId();
+		return model.getResidue(chain, spec.getResidueIndex());
 	}
 
 	public static String getAtomName(String atomSpec) {
@@ -254,7 +177,7 @@ public abstract class ChimUtils {
 	}
 
 	public static List<String> getStructureKeys(CyTable table, CyIdentifiable cyObj,
-			List<String> attrsFound) {
+			List<String> attrsFound, StructureManager manager) {
 		CyRow row = table.getRow(cyObj.getSUID());
 		List<String> cellList = new ArrayList<String>();
 		// iterate over attributes that contain structures
@@ -273,9 +196,9 @@ public abstract class ChimUtils {
 				// TODO: [Bug] Will break parsing if residueID contains commas
 				String[] cellArray = cell.split(",");
 				for (String str : cellArray) {
-					String[] keyParts = ChimUtils.getResKeyParts(str.trim());
-					if (keyParts[0] != null) {
-						cellList.add(keyParts[0]);
+					AtomSpec spec = AtomSpec.getAttributeAtomSpec(str.trim(), manager);
+					if (spec.getName() != null) {
+						cellList.add(spec.getName());
 					}
 				}
 			} else if (colType == List.class && col.getListElementType() == String.class) {
@@ -284,9 +207,9 @@ public abstract class ChimUtils {
 					continue;
 				} else {
 					for (String str : values) {
-						String[] keyParts = ChimUtils.getResKeyParts(str.trim());
-						if (keyParts[0] != null) {
-							cellList.add(keyParts[0]);
+						AtomSpec spec = AtomSpec.getAttributeAtomSpec(str.trim(), manager);
+						if (spec.getName() != null) {
+							cellList.add(spec.getName());
 						}
 					}
 				}
@@ -338,121 +261,6 @@ public abstract class ChimUtils {
 		return cellList;
 	}
 
-	public static String[] getResKeyParts(String resKey) {
-		// [pdbID[.modelNo]#][residueID][.chainID]
-		// pdbID := 4-character code | "URL" | "path"
-		String[] resKeyParts = new String[4];
-		String[] split = resKey.split("#");
-		String resChain = null;
-		// if no "#" then it is either only a pdb id or a residue or a chain
-		if (split.length == 1) {
-			// pdb id without model
-			if (resKey.length() == 4 && resKey.indexOf("\\.") < 0) {
-				parseModelID(resKey, resKeyParts);
-			}
-			// pdb link or file
-			else if (resKey.startsWith("\"")) {
-				parseModelID(resKey, resKeyParts);
-			}
-			// chain and residue or model and number
-			else {
-				String[] splitSplit = resKey.split("\\.");
-				if (splitSplit.length == 1) {
-					// only a chain or a residue
-					resChain = resKey;
-				} else {
-					try {
-						// pdb with a model
-						Integer.parseInt(splitSplit[1]);
-						parseModelID(resKey, resKeyParts);
-					} catch (NumberFormatException ex) {
-						// residue and chain
-						resChain = resKey;
-					}
-				}
-			}
-		} else if (split.length == 2) {
-			// model and residue+chain
-			parseModelID(split[0], resKeyParts);
-			resChain = split[1];
-		} else {
-			// model string with "#"
-			// TODO: [Optional] Are there more possibilities?
-			parseModelID(resKey.substring(0, resKey.lastIndexOf("#")), resKeyParts);
-			resChain = resKey.substring(resKey.lastIndexOf("#") + 1, resKey.length());
-		}
-		if (resChain != null) {
-			//System.out.println(resChain);
-			String[] resChainSplit = resChain.split("\\.");
-			if (resChainSplit.length == 1) {
-				// TODO: [Optional] Find a better way to distinguish between chain and residue
-				// if only one character and not an int, probably a chain
-				if (resChainSplit[0].length() == 1) {
-					try {
-						Integer.parseInt(resChainSplit[0]);
-						resKeyParts[3] = resChainSplit[0];
-					} catch (NumberFormatException ex) {
-						resKeyParts[2] = resChainSplit[0];
-					}
-				} else {
-					resKeyParts[3] = resChainSplit[0];
-				}
-			} else if (resChainSplit.length == 2) {
-				resKeyParts[2] = resChainSplit[0];
-				resKeyParts[3] = resChainSplit[1];
-			} else {
-				// too many dots?
-				logger.info("Could not parse residue identifier: " + resKey);
-			}
-		}
-		// String print = "";
-		// for (int i = 0; i < resKeyParts.length; i++) {
-		// if (resKeyParts[i] == null) {
-		// print += i + ": null\t";
-		// } else {
-		// print += i + ": " + resKeyParts[i] + ";";
-		// }
-		// }
-		// System.out.println(print);
-		return resKeyParts;
-	}
-
-	public static void parseModelID(String modelID, String[] resKeyParts) {
-		if (modelID.startsWith("\"")) {
-			if (modelID.endsWith("\"")) {
-				resKeyParts[0] = modelID.substring(1, modelID.length() - 1);
-				return;
-			} else {
-				try {
-					Integer.parseInt(modelID.substring(modelID.lastIndexOf("\"") + 2,
-							modelID.length()));
-					resKeyParts[0] = modelID.substring(0, modelID.lastIndexOf("\"") - 1);
-					resKeyParts[1] = modelID.substring(modelID.lastIndexOf("\"") + 2,
-							modelID.length());
-				} catch (NumberFormatException ex) {
-					resKeyParts[0] = modelID.substring(1);
-				}
-			}
-		} else {
-			String[] modelIDNo = modelID.split("\\.");
-			if (modelIDNo.length == 1) {
-				resKeyParts[0] = modelIDNo[0];
-			} else if (modelIDNo.length == 2) {
-				try {
-					Integer.parseInt(modelIDNo[1]);
-					resKeyParts[0] = modelIDNo[0];
-					resKeyParts[1] = modelIDNo[1];
-				} catch (NumberFormatException ex) {
-					resKeyParts[0] = modelID;
-				}
-			} else {
-				// length > 1, so we probably have a file name with "." in it
-				logger.info("Could not parse model identifier: " + modelID);
-				resKeyParts[0] = modelID;
-			}
-		}
-	}
-
 	/**
 	 * This method takes a Cytoscape attribute specification ([structure#][residue][.chainID]) and
 	 * returns the lowest-level object referenced by the spec. For example, if the spec is "1tkk",
@@ -481,7 +289,6 @@ public abstract class ChimUtils {
 		ChimeraChain chimeraChain = null;
 		ChimeraResidue chimeraResidue = null;
 
-		// System.out.println("Getting object from attribute: "+attrSpec);
 		try {
 			String[] split = attrSpec.split("#");
 			String resChain = null;
@@ -536,7 +343,7 @@ public abstract class ChimUtils {
 					chimeraModel = models.get(0);
 				} else {
 					try {
-						chimeraModel = chimeraManager.getChimeraModel(Integer.valueOf(model), 0);
+						chimeraModel = chimeraManager.getChimeraModel(Integer.valueOf(model), null);
 					} catch (NumberFormatException ex) {
 						// ignore
 					}
@@ -575,8 +382,7 @@ public abstract class ChimUtils {
 		return null;
 	}
 
-	public static ChimeraStructuralObject fromAttribute(String attrSpec,
-			ChimeraManager chimeraManager) {
+	public static ChimeraStructuralObject fromAttribute(String attrSpec, ChimeraManager chimeraManager) {
 		// TODO: Make sure it is OK to remove this: || attrSpec.indexOf('-') > 0
 		if (attrSpec == null || attrSpec.indexOf(',') > 0) {
 			// No support for either lists or ranges
@@ -584,92 +390,60 @@ public abstract class ChimUtils {
 			logger.warn("No support for identifier: " + attrSpec);
 			return null;
 		}
-		String[] modelIDNoResChain = getResKeyParts(attrSpec);
 
-		/*
-		System.out.print("modelIDNoResChain: [");
-		for (int i=0; i < modelIDNoResChain.length-1;i++)
-			System.out.print(modelIDNoResChain[i]+",");
-		System.out.println(modelIDNoResChain[modelIDNoResChain.length-1]+"]");
-		*/
+		AtomSpec spec = AtomSpec.getAttributeAtomSpec(attrSpec, chimeraManager.getStructureManager());
 
 		ChimeraModel chimeraModel = null;
 		ChimeraChain chimeraChain = null;
 		ChimeraResidue chimeraResidue = null;
 
-		// System.out.println("Getting object from attribute: "+attrSpec);
-		try {
-			if (modelIDNoResChain[0] != null) {
-				String modelID = modelIDNoResChain[0];
-				List<ChimeraModel> models = chimeraManager.getChimeraModels(modelID,
-						ModelType.PDB_MODEL);
-				if (models.size() == 1) { // usual case with only one model
-					chimeraModel = models.get(0);
-				} else if (models.size() > 1 && modelIDNoResChain[1] != null) {
-					// there are several submodels
-					try {
-						int modelNo = Integer.valueOf(modelIDNoResChain[1]);
-						for (ChimeraModel model : models) {
-							if (model.getSubModelNumber() == modelNo) {
-								chimeraModel = model;
-								break;
-							}
-						}
-					} catch (NumberFormatException ex) {
-						// ignore
-					}
-				} else {
-					// TODO: [Optional] What is this doing?
-					try {
-						chimeraModel = chimeraManager.getChimeraModel(Integer.valueOf(modelID), 0);
-					} catch (NumberFormatException ex) {
-						// ignore
+		if (spec.getName() != null) {
+			List<ChimeraModel> models = chimeraManager.getChimeraModels(spec.getName(), ModelType.PDB_MODEL);
+			if (models.size() == 1) { // usual case with only one model
+				chimeraModel = models.get(0);
+			} else if (models.size() > 1 && spec.getSubModelIds() != null && spec.getSubModelIds().length > 0) {
+				for (ChimeraModel model: models) {
+					if (model.getSubModelIds()[0].equals(spec.getSubModelIds()[0])) {
+						chimeraModel = model;
+						break;
 					}
 				}
-			}
-			if (chimeraModel == null) {
-				// TODO: [Optional] Find a better way to handle this case
-				// If no model can be matched, continue
-				// System.out.println("No matching model could be find for " + attrSpec);
-				return null;
-				// chimeraModel = chimeraManager.getChimeraModel();
-				// logger.warn("No matching model could be find for " + attrSpec + ". Trying with "
-				// + chimeraModel.toSpec());
-			}
-			// System.out.println("ChimeraModel = " + chimeraModel);
-
-			if (modelIDNoResChain[3] != null) {
-				chimeraChain = chimeraModel.getChain(modelIDNoResChain[3]);
-				// System.out.println("ChimeraChain = " + chimeraChain);
-			}
-			if (modelIDNoResChain[2] != null) {
-				String residue = modelIDNoResChain[2];
-				if (chimeraChain != null) {
-					chimeraResidue = chimeraChain.getResidue(residue);
-				} else if (chimeraModel.getChain("_") != null) {
-					chimeraResidue = chimeraModel.getResidue("_", residue);
-				} else if (chimeraModel.getChainCount() == 1) {
-					chimeraResidue = chimeraModel.getResidue(chimeraModel.getChainNames()
-							.iterator().next(), residue);
+			} else {
+				// TODO: [Optional] What is this doing?
+				try {
+					chimeraModel = chimeraManager.getChimeraModel(Integer.valueOf(spec.getName()), null);
+				} catch (NumberFormatException ex) {
+					// ignore
 				}
-				// System.out.println("ChimeraResidue = " + chimeraResidue);
 			}
-
-			if (chimeraResidue != null)
-				return chimeraResidue;
-
-			if (chimeraChain != null)
-				return chimeraChain;
-
-			if (chimeraModel != null)
-				return chimeraModel;
-
-		} catch (Exception ex) {
-			// System.out.println("Could not parse chimera identifier: " +
-			// attrSpec+"("+ex.getMessage()+")");
-			logger.warn("Could not parse chimera identifier: " + attrSpec, ex);
 		}
-		return null;
+
+		if (chimeraModel == null) {
+			chimeraManager.getStructureManager().logError("Incorrect atom spec: '"+attrSpec+"'-- no model!");
+			return null;
+		}
+		if (spec.getChainId() != null)
+			chimeraChain = chimeraModel.getChain(spec.getChainId());
+
+		if (spec.getResidueNumber() >= 0) {
+			String residue = spec.getResidueIndex();
+			if (chimeraChain != null) {
+				chimeraResidue = chimeraChain.getResidue(residue);
+			} else if (chimeraModel.getChain("_") != null) {
+				chimeraResidue = chimeraModel.getResidue("_", residue);
+			} else if (chimeraModel.getChainCount() == 1) {
+				chimeraResidue = chimeraModel.getResidue(chimeraModel.getChainNames()
+						.iterator().next(), residue);
+			}
+		}
+
+		if (chimeraResidue != null)
+			return chimeraResidue;
+
+		if (chimeraChain != null)
+			return chimeraChain;
+
+		return chimeraModel;
 	}
 
 	/**
@@ -858,4 +632,16 @@ public abstract class ChimUtils {
 		}
 		return name;
 	}
+
+	public static String getModelString(ChimeraStructuralObject chimObj) {
+		String str = ""+chimObj.getModelNumber();
+		String[] subModelIds = chimObj.getSubModelIds();
+		if (subModelIds != null && subModelIds.length > 0) {
+			for (String sub: subModelIds) {
+				str += "."+sub;
+			}
+		}
+		return str;
+	}
+
 }

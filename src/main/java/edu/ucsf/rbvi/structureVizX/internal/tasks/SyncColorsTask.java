@@ -5,6 +5,7 @@ import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
+import org.cytoscape.work.util.ListSingleSelection;
 
 import edu.ucsf.rbvi.structureVizX.internal.model.RINManager;
 import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager;
@@ -15,11 +16,29 @@ public class SyncColorsTask extends AbstractTask {
 	private RINManager rinManager;
 	private CyNetworkView networkView;
 
+	enum Direction {
+		FROM_CYTOSCAPE("From current network view to associated ChimeraX Models"),
+		FROM_CHIMERA("From ChimeraX models to current network view");
+	
+		public String str;
+		Direction(String str) {
+			this.str = str;
+		}
+
+		public String toString() { return str; }
+	}
+
+
+	@Tunable(description = "Direction to synchronize colors", gravity = 1.0)
+	public ListSingleSelection<Direction> direction = 
+		new ListSingleSelection<>(Direction.FROM_CYTOSCAPE, Direction.FROM_CHIMERA);
+/*
 	@Tunable(description = "Apply colors from current network view to associated Chimera models", gravity = 1.0, dependsOn = "chimeraToCytoscape=false")
 	public boolean cytoscapeToChimera = true;
 
 	@Tunable(description = "Apply colors from associated Chimera models to current network view", gravity = 2.0, dependsOn = "cytoscapeToChimera=false")
 	public boolean chimeraToCytoscape = false;
+*/
 
 	public SyncColorsTask(StructureManager structureManager, CyNetworkView networkView) {
 		this.structureManager = structureManager;
@@ -40,13 +59,13 @@ public class SyncColorsTask extends AbstractTask {
 				networkView = current;
 			}
 		}
-		if (chimeraToCytoscape) {
+		if (direction.getSelectedValue() == Direction.FROM_CHIMERA) {
 			taskMonitor
-					.setStatusMessage("Applying colors from current network view to associated Chimera models ...");
+					.setStatusMessage("Applying colors from associated Chimera models to current network view ...");
 			rinManager.syncChimToCyColors(networkView);
 		} else {
 			taskMonitor
-					.setStatusMessage("Applying colors from associated Chimera models to current network view ...");
+					.setStatusMessage("Applying colors from current network view to associated Chimera models ...");
 			rinManager.syncCyToChimColors(networkView);
 		}
 	}

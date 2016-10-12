@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -24,16 +25,23 @@ import org.cytoscape.application.CyUserLog;
 import org.apache.log4j.Logger;
 
 import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager;
+import edu.ucsf.rbvi.structureVizX.internal.model.AtomSpec;
 
 public class ChimeraIO {
 
 	static private Process chimera;
-	static private String chimeraREST;
+	static private boolean chimeraLaunched = false;
+	static private String chimeraREST = null;
 	public static String restURL = "http://127.0.0.1:1234/v1/commands/structureViz/";
-	public static String startModel = "listen start models url \""+restURL+"modelChanged\"";
-	public static String startSel = "listen start select url \""+restURL+"selectionChanged\"";
+	public static String startModel = "listinfo notify start models structureVizX url \""+restURL+"modelChanged\"";
+	public static String startSel = "listinfo notify start select structureVizX url \""+restURL+"selectionChanged\"";
+	public static String suspendModel = "listinfo notify suspend models structureVizX";
+	public static String suspendSel = "listinfo notify suspend select structureVizX";
+	public static String resumeModel = "wait 1;listinfo notify resume models structureVizX";
+	public static String resumeSel = "wait 1;listinfo notify resume select structureVizX";
 
-	final Logger logger = Logger.getLogger(CyUserLog.NAME);
+	public static String stopSel = "listinfo notify stop select structureVizX";
+	public static String stopModel = "listinfo notify stop models structureVizX";
 
 	private StructureManager structureManager;
 
@@ -47,7 +55,7 @@ public class ChimeraIO {
 	}
 
 	public void stopListening() {
-		sendChimeraCommand("listen stop models; listen stop select", false);
+		sendChimeraCommand(stopSel+";"+stopModel+";wait 1", false);
 	}
 
 	/**
@@ -57,26 +65,72 @@ public class ChimeraIO {
 	 *            the selection command to pass to Chimera
 	 */
 	public void select(String command) {
-		sendChimeraCommand("listen stop select; "+command+"; "+startSel , false);
+		sendChimeraCommand(suspendSel, false);
+		sendChimeraCommand(command, false);
+		sendChimeraCommand(resumeSel , false);
+	}
+
+	/**
+	 * Select something in Chimera
+	 * 
+	 * @param command
+	 *            the selection command to pass to Chimera
+	 */
+	public void select(String sel, List<AtomSpec> specs) {
+		String command = sel;
+		if (specs != null && specs.size() > 0) {
+			// System.out.println("Sorting the specs");
+			Collections.sort(specs);
+			/*
+			System.out.println("Sorted specs: ");
+			for (AtomSpec spec: specs) 	{
+				System.out.println(spec.toSpec());
+			}
+			*/
+			command += " "+AtomSpec.collapseSpecs(specs);
+		}
+		// System.out.println("Command = "+sel);
+		select(command);
 	}
 
 	public void exitChimera() {
-		if (isChimeraLaunched() && chimera != null) {
-			sendChimeraCommand("stop really", false);
+		if (isChimeraLaunched()) {
+			sendChimeraCommand("exit", false);
 			try {
-				chimera.destroy();
+				if (chimera != null)
+					chimera.destroy();
 			} catch (Exception ex) {
 				// ignore
 			}
 		}
 		structureManager.getChimeraManager().clearOnChimeraExit();
+		chimera = null;
+		chimeraLaunched = false;
 	}
 
 	public boolean isChimeraLaunched() {
 		// TODO: [Optional] What is the best way to test if chimera is launched?
-		if (chimera != null) {
+		if (chimeraLaunched) {
 			return true;
 		}
+		return false;
+	}
+
+	public boolean initChimera(int chimeraPort) {
+		if (isChimeraLaunched()) {
+			// Assume this is a re-init
+			exitChimera();
+		}
+		chimeraREST = "http://127.0.0.1:"+chimeraPort+"/run?";
+
+		// See if we can talk
+		List<String> reply = sendChimeraCommandInternal("windowsize", false);
+		structureManager.logError("Unable to establish communication with ChimeraX");
+		if (reply != null) {
+			chimeraLaunched = true;
+			return true;
+		}
+		chimeraLaunched = false;
 		return false;
 	}
 
@@ -91,33 +145,38 @@ public class ChimeraIO {
 		String workingPath = "";
 		// iterate over possible paths for starting Chimera
 		for (String chimeraPath : chimeraPaths) {
+			// System.out.println("Looking at path: "+chimeraPath);
 			File path = new File(chimeraPath);
 			if (!path.canExecute()) {
+				// System.out.println("Path '"+chimeraPath+"' does not exist");
 				error += "File '" + path + "' does not exist.\n";
 				continue;
 			}
 			try {
+				// System.out.println("Trying path: "+chimeraPath);
 				List<String> args = new ArrayList<String>();
 				args.add(chimeraPath);
-				args.add("--start");
-				args.add("RESTServer");
+				args.add("--cmd");
+				args.add("rest start");
 				ProcessBuilder pb = new ProcessBuilder(args);
 				chimera = pb.start();
 				BufferedReader reader = new BufferedReader(new InputStreamReader(chimera.getInputStream()));
 				String line = reader.readLine();
-				// System.out.println("Chimera return line: "+line.trim());
-				if (line.startsWith("REST server on host 127.0.0.1 port ")) {
-					int port = Integer.parseInt(line.trim().substring(35));
+				if (line.startsWith("REST server started on host 127.0.0.1 port ")) {
+					int offset = line.indexOf("port ")+5;
+					int port = Integer.parseInt(line.trim().substring(offset));
 					chimeraREST = "http://127.0.0.1:"+port+"/run?";
 					error = "";
 				} else {
 					error += line.trim();
 				}
 				workingPath = chimeraPath;
-				logger.info("Strarting " + chimeraPath);
+				// System.out.println("chimeraREST = "+chimeraREST);
+				structureManager.logInfo("Strarting " + chimeraPath);
 				break;
 			} catch (Exception e) {
 				// Chimera could not be started
+				System.out.println("Exception: "+e.getMessage());
 				error += e.getMessage();
 			}
 		}
@@ -132,7 +191,7 @@ public class ChimeraIO {
 		}
 
 		// Tell the user that Chimera could not be started because of an error
-		logger.warn(error);
+		structureManager.logWarning(error);
 		return false;
 	}
 
@@ -149,12 +208,22 @@ public class ChimeraIO {
 		if (!isChimeraLaunched()) {
 			return null;
 		}
+
+		return sendChimeraCommandInternal(command, reply);
+	}
+
+	static int CONNECT_TIMEOUT = 1; // 1 second
+	static int SOCKET_TIMEOUT = 30; // 30 seconds
+	private List<String> sendChimeraCommandInternal(String command, boolean reply) {
 		
 		List<String> response = new ArrayList<>();
-	    RequestConfig globalConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
+		RequestConfig globalConfig = RequestConfig.custom()
+						.setCookieSpec(CookieSpecs.IGNORE_COOKIES)
+						.setConnectTimeout(CONNECT_TIMEOUT*1000)
+						.setSocketTimeout(SOCKET_TIMEOUT*1000).build();
 		CloseableHttpClient client = HttpClients.custom().setDefaultRequestConfig(globalConfig).build();
 		String args = URLEncoder.encode(command);
-		// System.out.println("Sending: '"+chimeraREST+"command="+args+"'");
+		System.out.println("Sending: '"+command+"'");
 		HttpGet request = new HttpGet(chimeraREST+"command="+args);
 		CloseableHttpResponse response1 = null;
 		try {
@@ -167,14 +236,20 @@ public class ChimeraIO {
 			String inputLine;
 			while ((inputLine = reader.readLine()) != null) {
 				// System.out.println("From chimera: "+inputLine.trim());
-				response.add(inputLine.trim());
+				if (inputLine.trim().length() > 0)
+					response.add(inputLine.trim());
 			}
 			EntityUtils.consume(entity1);
 
 		} catch (Exception e) {
-			logger.warn("Unable to execute command: "+command+" ("+e.getMessage()+")");
+			structureManager.logWarning("Unable to execute command: "+command+" ("+e.getMessage()+")");
 			structureManager.getChimeraManager().clearOnChimeraExit();
-			return null;
+			chimera = null;
+			chimeraLaunched = false;
+			response = null;
+		} finally {
+			if (request != null)
+				request.releaseConnection();
 		}
 		return response;
 	}

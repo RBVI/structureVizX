@@ -265,8 +265,6 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 	 */
 	public void valueChanged(TreeSelectionEvent e) {
 
-		// System.out.println("TreeSelectionEvent: "+e);
-
 		// Get the paths that are changing
 		TreePath[] cPaths = e.getPaths();
 		if (cPaths == null)
@@ -281,7 +279,7 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 			return;
 		}
 
-		// System.out.println("dialog selection changed");
+		System.out.println("dialog selection changed");
 		for (int i = 0; i < cPaths.length; i++) {
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) cPaths[i].getLastPathComponent();
 			if (!ChimeraStructuralObject.class.isInstance(node.getUserObject()))
@@ -292,10 +290,10 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 				structureManager.removeChimSelection(nodeInfo);
 			} else {
 				// nodeInfo.setSelected(true);
+				// System.out.println("Adding "+nodeInfo+" to selection");
 				structureManager.addChimSelection(nodeInfo);
 			}
-			// System.out.println("  Path: "+((DefaultMutableTreeNode)
-			// cPaths[i].getLastPathComponent()));
+			// System.out.println("  Path: "+((DefaultMutableTreeNode) cPaths[i].getLastPathComponent()));
 		}
 		// Update selection in Chimera
 		if (!ignoreDialogSelection) {
@@ -381,7 +379,7 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 			alignMenu.setEnabled(false);
 		chimeraMenu.add(alignMenu);
 
-		addMenuItem(chimeraMenu, "Focus all", COMMAND, "focus");
+		addMenuItem(chimeraMenu, "Focus all", COMMAND, "view");
 
 		JMenu presetMenu = new JMenu("Presets");
 		if (buildPresetMenu(presetMenu))

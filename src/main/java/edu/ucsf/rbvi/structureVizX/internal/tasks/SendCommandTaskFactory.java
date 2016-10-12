@@ -15,7 +15,7 @@ public class SendCommandTaskFactory extends AbstractTaskFactory implements TaskF
 	}
 
 	public TaskIterator createTaskIterator() {
-		return new TaskIterator(new SendComandTask(structureManager));
+		return new TaskIterator(new SendCommandTask(structureManager));
 	}
 
 	public boolean isReady() {

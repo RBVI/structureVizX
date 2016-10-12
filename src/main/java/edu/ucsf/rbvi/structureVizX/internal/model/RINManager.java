@@ -28,6 +28,7 @@ import org.cytoscape.application.CyUserLog;
 import org.apache.log4j.Logger;
 
 import edu.ucsf.rbvi.structureVizX.internal.io.ChimeraIO;
+import edu.ucsf.rbvi.structureVizX.internal.utils.StringUtils;
 
 // TODO: [Optional] No dist edges between ligands and others since we only consider distance between C_alphas
 //TODO: [Optional] Self edges (hydrogen bonds) are allowed
@@ -113,7 +114,7 @@ public class RINManager {
 
 	public void includeConnectivity(CyNetwork rin) {
 		// System.out.println("Getting connectivity");
-		List<String> replyList = chimeraIO.sendChimeraCommand("list physicalchains", true);
+		List<String> replyList = chimeraIO.sendChimeraCommand("listinfo polymers spec sel", true);
 		if (replyList != null) {
 			parseConnectivityReplies(replyList, rin);
 		}
@@ -344,7 +345,7 @@ public class RINManager {
 		int index = 0;
 		for (index = 0; index < replyLog.size(); index++) {
 			String str = replyLog.get(index);
-			System.out.println("parseHBondReplies: "+str);
+			// System.out.println("parseHBondReplies: "+str);
 			if (str.trim().startsWith("H-bonds")) {
 				foundHeader = true;
 				break;
@@ -356,7 +357,7 @@ public class RINManager {
 
 		Map<CyEdge, Double> distanceMap = new HashMap<CyEdge, Double>();
 		for (++index; index < replyLog.size(); index++) {
-			System.out.println("parseHBondReplies: "+replyLog.get(index));
+			// System.out.println("parseHBondReplies: "+replyLog.get(index));
 			String[] line = replyLog.get(index).trim().split("\\s+");
 			if (line.length != 5 && line.length != 6)
 				continue;
@@ -393,7 +394,7 @@ public class RINManager {
 		List<CyEdge> edgeList = new ArrayList<CyEdge>();
 		List<ChimeraResidue[]> rangeList = new ArrayList<ChimeraResidue[]>();
 		for (String line : replyLog) {
-			String[] tokens = line.split(" ");
+			String[] tokens = StringUtils.tokenize(line);
 			if (tokens.length != 4)
 				continue;
 			String start = tokens[2];
@@ -583,16 +584,17 @@ public class RINManager {
 
 	private CyNode createResidueNode(CyNetwork rin, Map<String, CyNode> nodeMap,
 			boolean ignoreWater, String alias) {
-		// alias is a atomSpec of the form [#model]:residueNumber@atom
+		// alias is a atomSpec of the form [#model]/chain:residueNumber@atom
 		// We want to convert that to a node identifier of [pdbid#]ABC nnn
 		// and add FunctionalResidues and BackboneOnly attributes
 		// boolean singleModel = false;
-		ChimeraModel model = ChimUtils.getModel(alias, chimeraManager);
+		AtomSpec spec = AtomSpec.getChimeraXAtomSpec(alias, structureManager);
+		ChimeraModel model = chimeraManager.getChimeraModel(spec);
 		if (model == null) {
 			model = chimeraManager.getChimeraModel();
 			// singleModel = true;
 		}
-		ChimeraResidue residue = ChimUtils.getResidue(alias, model);
+		ChimeraResidue residue = ChimUtils.getResidue(spec, model, chimeraManager);
 		if (residue == null || (ignoreWater && residue.getType().equals("HOH"))) {
 			return null;
 		}
@@ -611,11 +613,7 @@ public class RINManager {
 		// if there are submodels save the submodel number in the identifier
 		// if (chimeraManager.getChimeraModels(model.getModelName(), ModelType.PDB_MODEL).size() >
 		// 1) {
-		if (model.getSubModelNumber() > 0) {
-			nodeName = model.getModelName() + "." + model.getSubModelNumber() + "#" + nodeName;
-		} else {
-			nodeName = model.getModelName() + "#" + nodeName;
-		}
+		nodeName = model.getModelName() + model.getSubModelString() + "#" + nodeName;
 
 		// Create the node if it does not already exist in the network
 		CyNode node = null;
@@ -627,9 +625,7 @@ public class RINManager {
 			// Add simple attributes such as name, type, index and association with the chimera
 			// model it was created from
 			String chimRes = model.getModelName();
-			if (model.getSubModelNumber() > 0) {
-				chimRes += "." + model.getSubModelNumber();
-			}
+			chimRes += model.getSubModelString();
 			chimRes += "#" + residue.getIndex();
 			if (residue.getChainId() != "_") {
 				chimRes += "." + residue.getChainId();
@@ -806,7 +802,7 @@ public class RINManager {
 		// add all selected nodes
 		List<String> residues = chimeraManager.getSelectedResidueSpecs();
 		for (String res : residues) {
-			// System.out.println("get selected residue");
+			// System.out.println("get selected residue: "+res);
 			createResidueNode(rin, nodeMap, ignoreWater, res);
 		}
 
@@ -836,7 +832,7 @@ public class RINManager {
 			if (chimObj instanceof ChimeraModel) {
 				// get attribute values
 				Map<ChimeraResidue, Object> resValues = chimeraManager.getAttrValues(command,
-						chimObj.getChimeraModel());
+						chimObj.getChimeraModel(), true);
 				if (resValues.size() == 0) {
 					continue;
 				}
@@ -880,11 +876,11 @@ public class RINManager {
 		}
 		for (ChimeraStructuralObject chimObj : chimObjs) {
 			if (chimObj instanceof ChimeraModel) {
-				chimeraIO.sendChimeraCommand("ksdssp", false);
-				Map<ChimeraResidue, Object> hResidues = chimeraManager.getAttrValues("isHelix",
-						chimObj.getChimeraModel());
-				Map<ChimeraResidue, Object> sResidues = chimeraManager.getAttrValues("isSheet",
-						chimObj.getChimeraModel());
+				chimeraIO.sendChimeraCommand("dssp", false);
+				Map<ChimeraResidue, Object> hResidues = chimeraManager.getAttrValues("is_helix",
+						chimObj.getChimeraModel(), true);
+				Map<ChimeraResidue, Object> sResidues = chimeraManager.getAttrValues("is_sheet",
+						chimObj.getChimeraModel(), true);
 				for (ChimeraResidue res : hResidues.keySet()) {
 					Set<CyIdentifiable> cyObjs = structureManager.getAssociatedCyObjs(res);
 					if (cyObjs == null) {
@@ -922,38 +918,43 @@ public class RINManager {
 			network.getDefaultNodeTable().createColumn(resAttr + ".z", Double.class, false);
 		}
 		// get coordinates
-		Map<ChimeraResidue, Double[]> resCoords = new HashMap<ChimeraResidue, Double[]>();
+		Map<ChimeraResidue, List<double[]>> resCoords = new HashMap<ChimeraResidue, List<double[]>>();
 		for (ChimeraStructuralObject model : chimObjs) {
 			if (model instanceof ChimeraModel) {
-				List<String> reply = chimeraIO.sendChimeraCommand("getcrd xf "
-						+ model.getChimeraModel().toSpec(), true);
+				List<String> reply = chimeraIO.sendChimeraCommand("getcrd "+model.toSpec(), true);
 				if (reply == null) {
 					continue;
 				}
 				String[] lineParts = null;
 				for (String inputLine : reply) {
 					// response from chimera should look like this:
-					// Atom #0:355.A@C 36.598 78.221 2.056
-					// Atom #0:355.A@CA 35.276 77.803 1.543
+					// Atom #0/A:355@C 36.598 78.221 2.056
+					// Atom #0/A:355@CA 35.276 77.803 1.543
 					lineParts = inputLine.split("\\s+");
 					if (lineParts.length != 5) {
 						continue;
 					}
-					ChimeraResidue residue = ChimUtils.getResidue(lineParts[1],
-							model.getChimeraModel());
-					String atom = ChimUtils.getAtomName(lineParts[1]);
+					AtomSpec spec = AtomSpec.getChimeraXAtomSpec(lineParts[1], structureManager);
+					ChimeraResidue residue = ChimUtils.getResidue(spec, model.getChimeraModel(), 
+					                                              chimeraManager);
+					String atom = spec.getAtomName();
 					if (residue == null) {
 						continue;
 					}
-					Double[] coord = null;
+					double[] coord = null;
 					try {
-						coord = new Double[3];
+						coord = new double[3];
 						for (int i = 0; i < 3; i++) {
-							coord[i] = new Double(lineParts[i + 2]);
+							coord[i] = Double.valueOf(lineParts[i + 2]);
 						}
-						if (!resCoords.containsKey(residue) || atom.equals("CA")) {
-							resCoords.put(residue, coord);
+						// TODO: average location of ligands?
+						// if (!resCoords.containsKey(residue) || atom.equals("CA")) {
+						// 	resCoords.put(residue, coord);
+						// }
+						if (!resCoords.containsKey(residue)) {
+							resCoords.put(residue, new ArrayList<double[]>());
 						}
+						resCoords.get(residue).add(coord);
 					} catch (NumberFormatException ex) {
 						// no coordinates for this node, ignore
 						// ex.printStackTrace();
@@ -961,16 +962,28 @@ public class RINManager {
 				}
 			}
 		}
+
+		for (ChimeraResidue residue: resCoords.keySet()) {
+			double coords[] = {0.0,0.0,0.0};
+			int atoms = resCoords.get(residue).size();
+			for (double[] coord: resCoords.get(residue)) {
+				coords[0] += coord[0]/atoms;
+				coords[1] += coord[1]/atoms;
+				coords[2] += coord[2]/atoms;
+			}
+			resCoords.get(residue).add(0, coords);
+		}
+
 		// save coordinates as attributes
 		for (CyNode node : network.getNodeList()) {
-			Set<ChimeraStructuralObject> nodeChimObjs = structureManager
-					.getAssociatedChimObjs(node);
+			Set<ChimeraStructuralObject> nodeChimObjs = 
+							structureManager.getAssociatedChimObjs(node);
 			if (nodeChimObjs == null) {
 				continue;
 			}
 			for (ChimeraStructuralObject chimObj : nodeChimObjs) {
 				if (resCoords.containsKey(chimObj)) {
-					final Double[] coord = resCoords.get(chimObj);
+					final double[] coord = resCoords.get(chimObj).get(0);
 					network.getRow(node).set(resAttr + ".x", coord[0]);
 					network.getRow(node).set(resAttr + ".y", coord[1]);
 					network.getRow(node).set(resAttr + ".z", coord[2]);
@@ -980,10 +993,10 @@ public class RINManager {
 	}
 
 	public void syncColors() {
-		Map<Integer, ChimeraModel> models = chimeraManager.getSelectedModels();
+		Map<String, ChimeraModel> models = chimeraManager.getSelectedModels();
 		for (ChimeraModel selModel : models.values()) {
 			ChimeraModel model = chimeraManager.getChimeraModel(selModel.getModelNumber(),
-					selModel.getSubModelNumber());
+					selModel.getSubModelIds());
 			if (model != null) {
 				for (CyIdentifiable obj : model.getCyObjects().keySet()) {
 					if (obj instanceof CyNetwork) {
@@ -1012,8 +1025,8 @@ public class RINManager {
 		for (ChimeraStructuralObject chimObj : chimObjs) {
 			if (chimObj instanceof ChimeraModel) {
 				// get attribute values
-				Map<ChimeraResidue, Object> resValues = chimeraManager.getAttrValues("ribbonColor",
-						chimObj.getChimeraModel());
+				Map<ChimeraResidue, Object> resValues = chimeraManager.getAttrValues("ribbon_color",
+						chimObj.getChimeraModel(), false);
 				if (resValues.size() == 0) {
 					continue;
 				}
@@ -1026,10 +1039,10 @@ public class RINManager {
 					for (CyIdentifiable cyId : cyObjs) {
 						if (cyId instanceof CyNode && network.containsNode((CyNode) cyId)) {
 							String[] rgb = ((String) resValues.get(res)).split(",");
-							if (rgb.length == 3) {
+							if (rgb.length == 4) {
 								try {
-									Color resColor = new Color(Float.valueOf(rgb[0]),
-											Float.valueOf(rgb[1]), Float.valueOf(rgb[2]));
+									Color resColor = new Color(Integer.valueOf(rgb[0]),
+											Integer.valueOf(rgb[1]), Integer.valueOf(rgb[2]));
 									nodeToColorMapping.put(cyId.getSUID(), resColor);
 									// network.getRow(cyId).set("chimeraColor",
 									// resColor.toString());
@@ -1068,7 +1081,7 @@ public class RINManager {
 	}
 
 	public void syncCyToChimColors(CyNetworkView networkView) {
-		final Map<Color, String> color2res = new HashMap<Color, String>();
+		final Map<Color, List<AtomSpec>> color2res = new HashMap<Color, List<AtomSpec>>();
 		for (final View<CyNode> nodeView : networkView.getNodeViews()) {
 			final CyNode node = nodeView.getModel();
 			final Color color = (Color) nodeView
@@ -1078,26 +1091,27 @@ public class RINManager {
 			if (color != null && chimObjs != null) {
 				for (ChimeraStructuralObject chimObj : chimObjs) {
 					if (!color2res.containsKey(color)) {
-						color2res.put(color, chimObj.toSpec());
-					} else {
-						color2res.put(color, color2res.get(color) + chimObj.toSpec());
+						color2res.put(color, new ArrayList<AtomSpec>());
 					}
+					color2res.get(color).add(chimObj.toAtomSpec());
 				}
 			}
 		}
 		for (final Color color : color2res.keySet()) {
+			List<AtomSpec> specList = color2res.get(color);
+			Collections.sort(specList);
+			String spec = AtomSpec.collapseSpecs(specList);
 			String colorDef = "";
 			try {
 				float[] rgbColorCodes = color.getRGBColorComponents(null);
 				for (int i = 0; i < rgbColorCodes.length; i++) {
-					colorDef += rgbColorCodes[i] + ",";
+					colorDef += (int)(rgbColorCodes[i]*255) + ",";
 				}
 			} catch (Exception e) {
 				continue;
 			}
-			colorDef += "r,a"; // ribbons and atoms
-			chimeraIO.sendChimeraCommand("color " + colorDef + " " + color2res.get(color),
-					false);
+			chimeraIO.sendChimeraCommand("color "+spec+" rgb("+colorDef+") target ar",
+			 		false);
 		}
 	}
 

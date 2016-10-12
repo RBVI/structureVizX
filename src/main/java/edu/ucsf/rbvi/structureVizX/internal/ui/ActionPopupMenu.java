@@ -141,65 +141,67 @@ public class ActionPopupMenu extends JPopupMenu {
 		// Hide
 		addItem(null, "Hide", "~disp %sel", 0);
 		// Focus
-		addItem(null, "Focus", "focus %sel", 0);
+		addItem(null, "Focus", "view %sel", 0);
 		// Color
 		submenu = new JMenu("Color");
 		{
-			JMenuItem rainbow = addItem(submenu, "Rainbow by chain", "rainbow chain %sel", 0);
+			JMenuItem rainbow = addItem(submenu, "Rainbow by chain", "rainbow %sel chains", 0);
 			if (modelList.size() == 0) {
 				rainbow.setEnabled(false);
 			}
-			rainbow = addItem(submenu, "Rainbow by residue", "rainbow residue %sel", 0);
+			rainbow = addItem(submenu, "Rainbow by residue", "rainbow %sel residues", 0);
 			if (modelList.size() == 0 && chainList.size() == 0) {
 				rainbow.setEnabled(false);
 			}
-			addColorMenu(submenu, "Atoms/Bonds", "color ", ",a %sel", true);
-			addColorMenu(submenu, "Ribbons", "color ", ",r %sel", false);
-			addColorMenu(submenu, "Surfaces", "color ", ",s %sel", false);
-			addColorMenu(submenu, "Labels", "color ", ",l %sel", false);
+			addColorMenu(submenu, "Atoms/Bonds", "color %sel ", "", " atoms", true);
+			addColorMenu(submenu, "Ribbons", "color %sel ", "", " ribbons", false);
+			addColorMenu(submenu, "Surfaces", "color %sel ", "", " surfaces", false);
+			// addColorMenu(submenu, "Labels", "color ", " %sel", " labels", false);
 		}
 		add(submenu);
 		// Depict
 		submenu = new JMenu("Depict");
 		{
-			addItem(submenu, "Wire", "repr wire %sel", 0);
-			addItem(submenu, "Stick", "repr stick %sel", 0);
-			addItem(submenu, "Ball & Stick", "repr bs %sel", 0);
-			addItem(submenu, "Sphere", "repr cpk %sel", 0);
-			addItem(submenu, "CPK", "repr cpk %sel", 0);
+			// addItem(submenu, "Wire", "style %sel stick", 0);
+			addItem(submenu, "Stick", "style %sel stick", 0);
+			addItem(submenu, "Ball & Stick", "style %sel ball", 0);
+			addItem(submenu, "Sphere", "style %sel sphere", 0);
+			addItem(submenu, "CPK", "style %sel sphere", 0);
 			sub2 = new JMenu("Ribbon");
 			{
-				addItem(sub2, "Hide", "~ribbon %sel", 0);
-				addItem(sub2, "Flat", "ribrepr flat %sel;ribbon %sel", 0);
-				addItem(sub2, "Edged", "ribrepr edged %sel;ribbon %sel", 0);
-				addItem(sub2, "Round", "ribrepr round %sel;ribbon %sel", 0);
+				addItem(sub2, "Hide", "hide %sel ribbons", 0);
+				addItem(sub2, "Barbell", "show %sel ribbons; cartoon xsection barbell %sel", 0);
+				addItem(sub2, "Edged", "show %s ribbons; cartoon xsection %sel rectangle", 0);
+				addItem(sub2, "Round", "show %s ribbons; cartoon xsection %sel oval", 0);
 			}
 			submenu.add(sub2);
 			sub2 = new JMenu("Surface");
 			{
-				addItem(sub2, "Hide", "~surface %sel", 0);
-				addItem(sub2, "Solid", "surface %sel;surfrepr solid", 0);
-				addItem(sub2, "Mesh", "surface %sel;surfrepr mesh", 0);
-				addItem(sub2, "Dot", "surface %sel;surfrepr dot", 0);
+				addItem(sub2, "Hide", "hide %sel surface", 0);
+				addItem(sub2, "Show", "show %sel surface", 0);
+				// addItem(sub2, "Solid", "surface %sel;surfrepr solid", 0);
+				// addItem(sub2, "Mesh", "surface %sel;surfrepr mesh", 0);
+				// addItem(sub2, "Dot", "surface %sel;surfrepr dot", 0);
 				JMenu sub3 = new JMenu("Transparency");
 				{
-					addItem(sub3, "0%", "surftransparency 0 %sel", 0);
-					addItem(sub3, "10%", "surftransparency 10 %sel", 0);
-					addItem(sub3, "20%", "surftransparency 20 %sel", 0);
-					addItem(sub3, "30%", "surftransparency 30 %sel", 0);
-					addItem(sub3, "40%", "surftransparency 40 %sel", 0);
-					addItem(sub3, "50%", "surftransparency 50 %sel", 0);
-					addItem(sub3, "60%", "surftransparency 60 %sel", 0);
-					addItem(sub3, "70%", "surftransparency 70 %sel", 0);
-					addItem(sub3, "80%", "surftransparency 80 %sel", 0);
-					addItem(sub3, "90%", "surftransparency 90 %sel", 0);
+					addItem(sub3, "0%", "color 0 %sel", 0);
+					addItem(sub3, "10%", "transparency %sel 10 target s", 0);
+					addItem(sub3, "20%", "transparency %sel 20 target s", 0);
+					addItem(sub3, "30%", "transparency %sel 30 target s", 0);
+					addItem(sub3, "40%", "transparency %sel 40 target s", 0);
+					addItem(sub3, "50%", "transparency %sel 50 target s", 0);
+					addItem(sub3, "60%", "transparency %sel 60 target s", 0);
+					addItem(sub3, "70%", "transparency %sel 70 target s", 0);
+					addItem(sub3, "80%", "transparency %sel 80 target s", 0);
+					addItem(sub3, "90%", "transparency %sel 90 target s", 0);
 				}
 				sub2.add(sub3);
 			}
 			submenu.add(sub2);
 		}
 		add(submenu);
-		// Label
+		// Label.  ChimeraX doesn't have atom labels, yet
+		/*
 		submenu = new JMenu("Label");
 		{
 			addItem(submenu, "Hide", "~label %sel;~rlabel %sel", 0);
@@ -209,10 +211,11 @@ public class ActionPopupMenu extends JPopupMenu {
 			addItem(submenu, "Residue", "rlabel %sel", 0);
 		}
 		add(submenu);
+		*/
 		// Clear Selection
 		addItem(null, "Clear selection", "~select", PopupActionListener.CLEAR_SELECTION);
 		add(new JSeparator());
-		addItem(null, "Delete selection", "listen stop select; delete %sel; "+ChimeraIO.startSel,
+		addItem(null, "Delete selection", ChimeraIO.suspendSel+"\ndelete %sel\n"+ChimeraIO.resumeSel,
 				PopupActionListener.DELETE);
 	}
 
@@ -303,7 +306,7 @@ public class ActionPopupMenu extends JPopupMenu {
 	 *          add the two atom-specific coloring options
 	 */
 	private JMenuItem addColorMenu(JMenu menu, String text, String prefix, String suffix,
-			boolean addByElement) {
+			String what, boolean addByElement) {
 		String[] colorList = { "red", "orange red", "orange", "yellow", "green", "forest green",
 				"cyan", "light sea green", "blue", "cornflower blue", "medium blue", "purple", "hot pink",
 				"magenta", "white", "light gray", "gray", "dark gray", "dim gray", "black" };
@@ -324,12 +327,12 @@ public class ActionPopupMenu extends JPopupMenu {
 		JMenu colorMenu = new JMenu(text);
 		JMenuItem colorItem;
 		if (addByElement) {
-			addItem(colorMenu, "By element", "color byelement %sel,a", 0);
+			addItem(colorMenu, "By element", "color %sel byelement atoms", 0);
 			// addItem(colorMenu, "By heteroatom", "color byhetero %sel",0);
-			addItem(colorMenu, "By heteroatom", "~color %sel,a; color byhetero %sel,a", 0);
+			addItem(colorMenu, "By heteroatom", "color %sel byhetero atoms", 0);
 		}
 		for (int color = 0; color < colorList.length; color++) {
-			colorItem = addItem(colorMenu, colorList[color], prefix + colorList[color] + suffix, 0);
+			colorItem = addItem(colorMenu, colorList[color], prefix + colorList[color] + suffix + what, 0);
 			if (rgb[color] > 0) {
 				colorItem.setForeground(Color.BLACK);
 				colorItem.setBackground(new Color(rgb[color]));

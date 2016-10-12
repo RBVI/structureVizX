@@ -82,6 +82,21 @@ public interface ChimeraStructuralObject {
 	public ChimeraModel getChimeraModel();
 
 	/**
+	 * Return the model number associated with this object
+	 *
+	 * @return the model number
+	 */
+	public int getModelNumber();
+
+	/**
+	 * Return the submodels associated with this object
+	 *
+	 * @return the array of submodels
+	 */
+	public String[] getSubModelIds();
+
+
+	/**
 	 * Set the "selected" state of this object
 	 * 
 	 * @param selected
@@ -109,4 +124,11 @@ public interface ChimeraStructuralObject {
 	 * @return the children of the object
 	 */
 	public List<ChimeraStructuralObject> getChildren();
+
+	/**
+	 * Get the AtomSpec for this object
+	 *
+	 * @return the atom spec
+	 */
+	public AtomSpec toAtomSpec();
 }

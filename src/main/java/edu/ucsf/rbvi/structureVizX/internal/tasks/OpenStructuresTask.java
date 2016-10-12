@@ -222,10 +222,12 @@ public class OpenStructuresTask extends AbstractTask implements ObservableTask {
 	public <R> R getResults(Class<? extends R> type) {
 		if (type.equals(String.class)) {
 			String result = "";
+			System.out.println("Found "+newModels.size()+" new models");
 			for (ChimeraStructuralObject obj: newModels) {
 				ChimeraModel model = (ChimeraModel)obj;
 				result += "#"+model.getModelNumber()+" "+model.getModelName()+"\n";
 			}
+			System.out.println("getResults: "+result);
 			return (R)result;
 		}
 		return (R)newModels;

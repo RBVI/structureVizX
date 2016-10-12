@@ -50,7 +50,7 @@ public class ChimeraChain implements ChimeraStructuralObject {
 	 * The model/subModel number this chain is a part of
 	 */
 	private int modelNumber;
-	private int subModelNumber;
+	private String[] subModelIds;
 
 	/**
 	 * A pointer to the model this chain is a part of
@@ -82,14 +82,14 @@ public class ChimeraChain implements ChimeraStructuralObject {
 	 * 
 	 * @param model
 	 *          the model number this chain is part of
-	 * @param subModel
+	 * @param subModelIds
 	 *          the subModel number this chain is part of
 	 * @param chainId
 	 *          the chain ID for this chain
 	 */
-	public ChimeraChain(int model, int subModel, String chainId) {
+	public ChimeraChain(int model, String[] subModelIds, String chainId) {
 		this.modelNumber = model;
-		this.subModelNumber = subModel;
+		this.subModelIds = subModelIds;
 		this.chainId = chainId;
 		residueMap = new TreeMap<String, ChimeraResidue>();
 	}
@@ -233,8 +233,8 @@ public class ChimeraChain implements ChimeraStructuralObject {
 	 * 
 	 * @return the sub-model number
 	 */
-	public int getSubModelNumber() {
-		return subModelNumber;
+	public String[] getSubModelIds() {
+		return subModelIds;
 	}
 
 	/**
@@ -249,6 +249,10 @@ public class ChimeraChain implements ChimeraStructuralObject {
 		} else {
 			return ("Chain " + chainId + " (" + getResidueCount() + " residues)");
 		}
+	}
+
+	public AtomSpec toAtomSpec() {
+		return AtomSpec.getAtomSpec(this);
 	}
 
 	/**
@@ -274,10 +278,16 @@ public class ChimeraChain implements ChimeraStructuralObject {
 	 * @return Chimera specification
 	 */
 	public String toSpec() {
+		String model = "#" + modelNumber;
+		if (subModelIds != null && subModelIds.length > 0) {
+			for (String submodel: subModelIds)
+				model += "."+submodel;
+		}
+
 		if (chainId.equals("_")) {
-			return ("#" + modelNumber + "." + subModelNumber + ":.");
+			return (model);
 		} else {
-			return ("#" + modelNumber + "." + subModelNumber + ":." + chainId);
+			return (model + "/" + chainId);
 		}
 	}
 

@@ -37,6 +37,7 @@ import edu.ucsf.rbvi.structureVizX.internal.tasks.AlignCommandTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.AlignStructuresTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.AnnotateStructureNetworkTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.AssociateStructuresTaskFactory;
+import edu.ucsf.rbvi.structureVizX.internal.tasks.ChimeraProcessTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.CloseStructuresEdgeTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.CloseStructuresTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.CreateStructureNetworkTaskFactory;
@@ -402,6 +403,13 @@ public class CyActivator extends AbstractCyActivator {
 		selectionChangedTaskProperties.setProperty(COMMAND_NAMESPACE, "structureViz");
 		registerService(bc, selectionChangedTaskFactory, TaskFactory.class, selectionChangedTaskProperties);
 
+		TaskFactory chimeraProcessTaskFactory = new ChimeraProcessTaskFactory(structureManager);
+		Properties chimeraProcessTaskProperties = new Properties();
+		chimeraProcessTaskProperties.setProperty(COMMAND, "chimera process");
+		chimeraProcessTaskProperties.setProperty(COMMAND_DESCRIPTION, 
+										"Notify structureVizX of existing ChimeraX process");
+		chimeraProcessTaskProperties.setProperty(COMMAND_NAMESPACE, "structureViz");
+		registerService(bc, chimeraProcessTaskFactory, TaskFactory.class, chimeraProcessTaskProperties);
 	}
 
 }

@@ -11,16 +11,19 @@ import org.cytoscape.work.Tunable;
 import edu.ucsf.rbvi.structureVizX.internal.model.CytoUtils;
 import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager;
 
-public class SendComandTask extends AbstractTask implements ObservableTask {
+public class SendCommandTask extends AbstractTask implements ObservableTask {
 
 	private StructureManager structureManager;
 
-	@Tunable(description = "Command")
+	@Tunable(description = "Command to send to Chimera")
 	public String command = "";
+
+	@Tunable(description = "Selection string to send to Chimera")
+	public String select = "";
 
 	public List<String> result;
 
-	public SendComandTask(StructureManager structureManager) {
+	public SendCommandTask(StructureManager structureManager) {
 		this.structureManager = structureManager;
 		this.result = null;
 	}
@@ -28,7 +31,10 @@ public class SendComandTask extends AbstractTask implements ObservableTask {
 	@Override
 	public void run(TaskMonitor taskMonitor) throws Exception {
 		taskMonitor.setTitle("Sending Command to Chimera");
-		result = structureManager.getChimeraIO().sendChimeraCommand(command, true);
+		if (select.length() > 0)
+			structureManager.getChimeraIO().select(select);
+		if (command.length() > 0)
+			result = structureManager.getChimeraIO().sendChimeraCommand(command, true);
 		// if (result != null) {
 		// structureManager.addChimReply(command, result);
 		// }

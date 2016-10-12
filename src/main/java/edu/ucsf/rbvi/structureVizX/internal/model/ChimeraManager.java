@@ -33,16 +33,14 @@ import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager.ModelType;
  * This object maintains the Chimera communication information.
  */
 public class ChimeraManager {
-	static private Map<Integer, ChimeraModel> currentModelsMap;
+	static private Map<String, ChimeraModel> currentModelsMap;
 
 	private StructureManager structureManager;
 	private ChimeraIO chimera;
 
-	final Logger logger = Logger.getLogger(CyUserLog.NAME);
-
 	public ChimeraManager(StructureManager structureManager, ChimeraIO chimera) {
 		this.structureManager = structureManager;
-		currentModelsMap = new HashMap<Integer, ChimeraModel>();
+		currentModelsMap = new HashMap<String, ChimeraModel>();
 		this.chimera = chimera;
 	}
 
@@ -76,8 +74,16 @@ public class ChimeraManager {
 		return models;
 	}
 
-	public ChimeraModel getChimeraModel(Integer modelNumber, Integer subModelNumber) {
-		Integer key = ChimUtils.makeModelKey(modelNumber, subModelNumber);
+	public ChimeraModel getChimeraModel(Integer modelNumber, String[] subModelIds) {
+		String key = ChimUtils.makeModelKey(modelNumber, subModelIds);
+		if (currentModelsMap.containsKey(key)) {
+			return currentModelsMap.get(key);
+		}
+		return null;
+	}
+
+	public ChimeraModel getChimeraModel(AtomSpec spec) {
+		String key = ChimUtils.makeModelKey(spec.getModelNumber(), spec.getSubModelIds());
 		if (currentModelsMap.containsKey(key)) {
 			return currentModelsMap.get(key);
 		}
@@ -109,26 +115,26 @@ public class ChimeraManager {
 	}
 
 	public boolean hasChimeraModel(Integer modelNubmer) {
-		return hasChimeraModel(modelNubmer, 0);
+		return hasChimeraModel(modelNubmer, null);
 	}
 
-	public boolean hasChimeraModel(Integer modelNubmer, Integer subModelNumber) {
-		return currentModelsMap.containsKey(ChimUtils.makeModelKey(modelNubmer, subModelNumber));
+	public boolean hasChimeraModel(Integer modelNubmer, String[] subModels) {
+		return currentModelsMap.containsKey(ChimUtils.makeModelKey(modelNubmer, subModels));
 	}
 
-	public void addChimeraModel(Integer modelNumber, Integer subModelNumber, ChimeraModel model) {
-		currentModelsMap.put(ChimUtils.makeModelKey(modelNumber, subModelNumber), model);
+	public void addChimeraModel(Integer modelNumber, String[] subModels, ChimeraModel model) {
+		currentModelsMap.put(ChimUtils.makeModelKey(modelNumber, subModels), model);
 	}
 
-	public void removeChimeraModel(Integer modelNumber, Integer subModelNumber) {
-		int modelKey = ChimUtils.makeModelKey(modelNumber, subModelNumber);
+	public void removeChimeraModel(Integer modelNumber, String[] subModels) {
+		String modelKey = ChimUtils.makeModelKey(modelNumber, subModels);
 		if (currentModelsMap.containsKey(modelKey)) {
 			currentModelsMap.remove(modelKey);
 		}
 	}
 
 	public List<ChimeraModel> openModel(String modelPath, ModelType type) {
-		logger.info("chimera open " + modelPath);
+		structureManager.logInfo("chimera open " + modelPath);
 		chimera.stopListening();
 		List<String> response = null;
 
@@ -146,7 +152,7 @@ public class ChimeraManager {
 		}
 		if (response == null) {
 			// something went wrong
-			logger.warn("Could not open " + modelPath);
+			structureManager.logWarning("Could not open " + modelPath);
 			return null;
 		}
 
@@ -158,7 +164,7 @@ public class ChimeraManager {
 					break;
 			}
 			models.add(model);
-			addChimeraModel(model.getModelNumber(), model.getSubModelNumber(), model);
+			addChimeraModel(model.getModelNumber(), model.getSubModelIds(), model);
 		}
 
 		// assign color and residues to open models
@@ -179,23 +185,23 @@ public class ChimeraManager {
 			}
 		}
 
-		chimera.sendChimeraCommand("focus", false);
+		chimera.sendChimeraCommand("view", false);
 		chimera.startListening();
 		return models;
 	}
 
 	public void closeModel(ChimeraModel model) {
 		chimera.stopListening();
-		logger.info("chimera close model " + model.getModelName());
+		structureManager.logInfo("chimera close model " + model.getModelName());
 		if (currentModelsMap.containsKey(ChimUtils.makeModelKey(model.getModelNumber(),
-				model.getSubModelNumber()))) {
+				model.getSubModelIds()))) {
 			chimera.sendChimeraCommand("close " + model.toSpec(), false);
 			// currentModelNamesMap.remove(model.getModelName());
 			currentModelsMap.remove(ChimUtils.makeModelKey(model.getModelNumber(),
-					model.getSubModelNumber()));
+					model.getSubModelIds()));
 			// selectionList.remove(chimeraModel);
 		} else {
-			logger.warn("Could not find model " + model.getModelName() + " to close.");
+			structureManager.logWarning("Could not find model " + model.getModelName() + " to close.");
 		}
 		chimera.startListening();
 	}
@@ -204,14 +210,15 @@ public class ChimeraManager {
 		chimera.sendChimeraCommand("focus", false);
 	}
 
-	public Map<Integer, ChimeraModel> getSelectedModels() {
-		Map<Integer, ChimeraModel> selectedModelsMap = new HashMap<Integer, ChimeraModel>();
-		List<String> chimeraReply = chimera.sendChimeraCommand("list selection level molecule", true);
+	public Map<String, ChimeraModel> getSelectedModels() {
+		Map<String, ChimeraModel> selectedModelsMap = new HashMap<String, ChimeraModel>();
+		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level molecule", true);
 		if (chimeraReply != null) {
 			for (String modelLine : chimeraReply) {
-				ChimeraModel chimeraModel = new ChimeraModel(modelLine);
-				Integer modelKey = ChimUtils.makeModelKey(chimeraModel.getModelNumber(),
-						chimeraModel.getSubModelNumber());
+				AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
+				ChimeraModel chimeraModel = new ChimeraModel(spec);
+				String modelKey = ChimUtils.makeModelKey(chimeraModel.getModelNumber(),
+						chimeraModel.getSubModelIds());
 				selectedModelsMap.put(modelKey, chimeraModel);
 			}
 		}
@@ -220,25 +227,28 @@ public class ChimeraManager {
 
 	public List<String> getSelectedResidueSpecs() {
 		List<String> selectedResidues = new ArrayList<String>();
-		List<String> chimeraReply = chimera.sendChimeraCommand("list selection level residue", true);
+		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level residue", true);
 		if (chimeraReply != null) {
 			for (String inputLine : chimeraReply) {
-				String[] inputLineParts = inputLine.split("\\s+");
-				if (inputLineParts.length == 5) {
-					selectedResidues.add(inputLineParts[2]);
-				}
+				AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, structureManager);
+				selectedResidues.add(spec.toSpec());
+				// String[] inputLineParts = inputLine.split("\\s+");
+				// if (inputLineParts.length == 5) {
+				// 	selectedResidues.add(inputLineParts[2]);
+				// }
 			}
 		}
 		return selectedResidues;
 	}
 
-	public void getSelectedResidues(Map<Integer, ChimeraModel> selectedModelsMap) {
-		List<String> chimeraReply = chimera.sendChimeraCommand("list selection level residue", true);
+	public void getSelectedResidues(Map<String, ChimeraModel> selectedModelsMap) {
+		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level residue", true);
 		if (chimeraReply != null) {
 			for (String inputLine : chimeraReply) {
-				ChimeraResidue r = new ChimeraResidue(inputLine);
-				Integer modelKey = ChimUtils
-						.makeModelKey(r.getModelNumber(), r.getSubModelNumber());
+				AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, structureManager);
+				ChimeraResidue r = new ChimeraResidue(spec);
+				String modelKey = ChimUtils
+						.makeModelKey(r.getModelNumber(), r.getSubModelIds());
 				if (selectedModelsMap.containsKey(modelKey)) {
 					ChimeraModel model = selectedModelsMap.get(modelKey);
 					model.addResidue(r);
@@ -257,10 +267,12 @@ public class ChimeraManager {
 	// TODO: [Optional] Handle smiles names in a better way in Chimera?
 	public List<ChimeraModel> getModelList() {
 		List<ChimeraModel> modelList = new ArrayList<ChimeraModel>();
-		List<String> list = chimera.sendChimeraCommand("list models type molecule", true);
-		if (list != null) {
+		List<String> list = chimera.sendChimeraCommand("listinfo models type AtomicStructure", true);
+		if (list != null && list.size() > 0) {
 			for (String modelLine : list) {
-				ChimeraModel chimeraModel = new ChimeraModel(modelLine);
+				// System.out.println("getModelList: line: '"+modelLine+"'");
+				AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
+				ChimeraModel chimeraModel = new ChimeraModel(spec);
 				modelList.add(chimeraModel);
 			}
 		}
@@ -275,6 +287,7 @@ public class ChimeraManager {
 	 */
 	public List<String> getPresets() {
 		ArrayList<String> presetList = new ArrayList<String>();
+		/* ChimeraX doesn't have presets (yet)
 		List<String> output = chimera.sendChimeraCommand("preset list", true);
 		if (output != null) {
 			for (String preset : output) {
@@ -285,6 +298,7 @@ public class ChimeraManager {
 				presetList.add(preset);
 			}
 		}
+		*/
 		return presetList;
 	}
 
@@ -296,8 +310,8 @@ public class ChimeraManager {
 	 * @return the default model Color for this model in Chimera
 	 */
 	public Color getModelColor(ChimeraModel model) {
-		List<String> colorLines = chimera.sendChimeraCommand("list model spec " + model.toSpec()
-				+ " attribute color", true);
+		List<String> colorLines = chimera.sendChimeraCommand("listinfo models spec " + model.toSpec()
+				+ " attribute color type AtomicStructure", true);
 		if (colorLines == null || colorLines.size() == 0) {
 			return null;
 		}
@@ -314,16 +328,16 @@ public class ChimeraManager {
 	 * 
 	 */
 	public void addResidues(ChimeraModel model) {
-		int modelNumber = model.getModelNumber();
-		int subModelNumber = model.getSubModelNumber();
+		String modelString = ChimUtils.getModelString(model);
 		// Get the list -- it will be in the reply log
-		List<String> reply = chimera.sendChimeraCommand("list residues spec " + model.toSpec(), true);
+		List<String> reply = chimera.sendChimeraCommand("listinfo residues spec " + model.toSpec(), true);
 		if (reply == null) {
 			return;
 		}
 		for (String inputLine : reply) {
-			ChimeraResidue r = new ChimeraResidue(inputLine);
-			if (r.getModelNumber() == modelNumber || r.getSubModelNumber() == subModelNumber) {
+			AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, structureManager);
+			ChimeraResidue r = new ChimeraResidue(spec);
+			if (modelString.equals(ChimUtils.getModelString(r))) {
 				model.addResidue(r);
 			}
 		}
@@ -331,7 +345,7 @@ public class ChimeraManager {
 
 	public List<String> getAttrList() {
 		List<String> attributes = new ArrayList<String>();
-		final List<String> reply = chimera.sendChimeraCommand("list resattr", true);
+		final List<String> reply = chimera.sendChimeraCommand("listinfo resattr", true);
 		if (reply != null) {
 			for (String inputLine : reply) {
 				String[] lineParts = inputLine.split("\\s");
@@ -343,16 +357,20 @@ public class ChimeraManager {
 		return attributes;
 	}
 
-	public Map<ChimeraResidue, Object> getAttrValues(String aCommand, ChimeraModel model) {
+	public Map<ChimeraResidue, Object> getAttrValues(String aCommand, ChimeraModel model,
+	                                                 boolean useSel) {
 		Map<ChimeraResidue, Object> values = new HashMap<ChimeraResidue, Object>();
-		final List<String> reply = chimera.sendChimeraCommand("list residue spec " + model.toSpec()
+		String sel = model.toSpec();
+		if (useSel)
+			sel = "sel";
+		final List<String> reply = chimera.sendChimeraCommand("listinfo residue spec " + sel
 				+ " attribute " + aCommand, true);
 		if (reply != null) {
 			for (String inputLine : reply) {
 				String[] lineParts = inputLine.split("\\s");
 				// Need to look for both old and new styles of spec
 				if (lineParts.length == 5 || lineParts.length == 7) {
-					ChimeraResidue residue = ChimUtils.getResidue(lineParts[2], model);
+					ChimeraResidue residue = ChimUtils.getResidue(lineParts[2], model, this);
 					String value = lineParts[4];
 					if (residue != null) {
 						if (value.equals("None")) {
@@ -394,7 +412,12 @@ public class ChimeraManager {
 
 	public void exitChimera() {
 		chimera.exitChimera();
+		currentModelsMap.clear();
 		clearOnChimeraExit();
+	}
+
+	public StructureManager getStructureManager() {
+		return structureManager;
 	}
 
 }
