@@ -904,6 +904,9 @@ public class StructureManager {
 					currentChimMap.put(newModel, currentChimMap.get(oldModel));
 					currentChimMap.remove(oldModel);
 				}
+
+				// Remove this from our list
+				currentModels.remove(oldModel);
 			}
 			// add new model to ChimeraManager
 			chimeraManager.addChimeraModel(modelNumber, subModelIds, newModel);
@@ -921,6 +924,14 @@ public class StructureManager {
 							newModel.getModelName()));
 				}
 			}
+		}
+
+		// Now, all of the models left in currentModels are no longer
+		// open in ChimeraX.  Remove them
+		for (ChimeraModel model: currentModels) {
+			if (currentChimMap.containsKey(model))
+				currentChimMap.remove(model);
+			chimeraManager.removeChimeraModel(model.getModelNumber(), model.getSubModelIds());
 		}
 
 		// associate all models with any node or network

@@ -170,9 +170,9 @@ public class ActionPopupMenu extends JPopupMenu {
 			sub2 = new JMenu("Ribbon");
 			{
 				addItem(sub2, "Hide", "hide %sel ribbons", 0);
-				addItem(sub2, "Barbell", "show %sel ribbons; cartoon xsection barbell %sel", 0);
-				addItem(sub2, "Edged", "show %s ribbons; cartoon xsection %sel rectangle", 0);
-				addItem(sub2, "Round", "show %s ribbons; cartoon xsection %sel oval", 0);
+				addItem(sub2, "Barbell", "show %sel ribbons; cartoon style %sel xsection barbell", 0);
+				addItem(sub2, "Edged", "show %sel ribbons; cartoon style %sel xsection rectangle", 0);
+				addItem(sub2, "Round", "show %sel ribbons; cartoon style %sel xsection round", 0);
 			}
 			submenu.add(sub2);
 			sub2 = new JMenu("Surface");
