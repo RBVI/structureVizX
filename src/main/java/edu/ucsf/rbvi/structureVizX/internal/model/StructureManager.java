@@ -866,6 +866,9 @@ public class StructureManager {
 		// Get all of the open models
 		List<ChimeraModel> newModelList = chimeraManager.getModelList();
 
+		// Get the list of our current models
+		Set<ChimeraModel> currentModels = new HashSet<ChimeraModel>(chimeraManager.getChimeraModels());
+
 		// Match them up -- assume that the model #'s haven't changed
 		for (ChimeraModel newModel : newModelList) {
 			// Get the color (for our navigator)

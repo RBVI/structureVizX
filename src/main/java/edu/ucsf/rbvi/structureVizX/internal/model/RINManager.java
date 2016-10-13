@@ -921,7 +921,7 @@ public class RINManager {
 		Map<ChimeraResidue, List<double[]>> resCoords = new HashMap<ChimeraResidue, List<double[]>>();
 		for (ChimeraStructuralObject model : chimObjs) {
 			if (model instanceof ChimeraModel) {
-				List<String> reply = chimeraIO.sendChimeraCommand("getcrd "+model.toSpec(), true);
+				List<String> reply = chimeraIO.sendChimeraCommand("getcrd "+model.toSpec()+" camera", true);
 				if (reply == null) {
 					continue;
 				}

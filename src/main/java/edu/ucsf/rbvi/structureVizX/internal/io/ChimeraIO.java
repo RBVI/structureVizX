@@ -32,7 +32,7 @@ public class ChimeraIO {
 	static private Process chimera;
 	static private boolean chimeraLaunched = false;
 	static private String chimeraREST = null;
-	public static String restURL = "http://127.0.0.1:1234/v1/commands/structureViz/";
+	public static String restURL = "http://127.0.0.1:12345/v1/commands/structureViz/";
 	public static String startModel = "listinfo notify start models structureVizX url \""+restURL+"modelChanged\"";
 	public static String startSel = "listinfo notify start select structureVizX url \""+restURL+"selectionChanged\"";
 	public static String suspendModel = "listinfo notify suspend models structureVizX";
