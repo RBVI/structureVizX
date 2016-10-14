@@ -49,6 +49,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTree;
+import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import javax.swing.event.TreeExpansionEvent;
@@ -150,8 +151,12 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 	 * We lost our connection to Chimera! Tell the user and exit.
 	 */
 	public void lostChimera() {
-		JOptionPane.showMessageDialog(this, "Lost connection to Chimera! structureViz must exit",
-				"Lost connection", JOptionPane.ERROR_MESSAGE);
+		
+		ChimeraLost lost = new ChimeraLost(this);
+		if (SwingUtilities.isEventDispatchThread())
+			lost.run();
+		else
+			SwingUtilities.invokeLater(lost);
 	}
 
 	/**
@@ -748,6 +753,17 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 				}
 			}
 			return this;
+		}
+	}
+
+	class ChimeraLost implements Runnable {
+
+		JDialog nav = null;
+		public ChimeraLost(JDialog nav) { this.nav = nav; }
+
+		public void run() {
+			JOptionPane.showMessageDialog(nav, "Lost connection to Chimera! structureViz must exit",
+					"Lost connection", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 }
