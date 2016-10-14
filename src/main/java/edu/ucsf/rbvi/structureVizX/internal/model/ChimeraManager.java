@@ -310,7 +310,7 @@ public class ChimeraManager {
 	 * @return the default model Color for this model in Chimera
 	 */
 	public Color getModelColor(ChimeraModel model) {
-		List<String> colorLines = chimera.sendChimeraCommand("listinfo models spec " + model.toSpec()
+		List<String> colorLines = chimera.sendChimeraCommand("listinfo models " + model.toSpec()
 				+ " attribute color type AtomicStructure", true);
 		if (colorLines == null || colorLines.size() == 0) {
 			return null;
@@ -330,7 +330,7 @@ public class ChimeraManager {
 	public void addResidues(ChimeraModel model) {
 		String modelString = ChimUtils.getModelString(model);
 		// Get the list -- it will be in the reply log
-		List<String> reply = chimera.sendChimeraCommand("listinfo residues spec " + model.toSpec(), true);
+		List<String> reply = chimera.sendChimeraCommand("listinfo residues " + model.toSpec(), true);
 		if (reply == null) {
 			return;
 		}
@@ -363,7 +363,7 @@ public class ChimeraManager {
 		String sel = model.toSpec();
 		if (useSel)
 			sel = "sel";
-		final List<String> reply = chimera.sendChimeraCommand("listinfo residue spec " + sel
+		final List<String> reply = chimera.sendChimeraCommand("listinfo residue " + sel
 				+ " attribute " + aCommand, true);
 		if (reply != null) {
 			for (String inputLine : reply) {

@@ -114,7 +114,7 @@ public class RINManager {
 
 	public void includeConnectivity(CyNetwork rin) {
 		// System.out.println("Getting connectivity");
-		List<String> replyList = chimeraIO.sendChimeraCommand("listinfo polymers spec sel", true);
+		List<String> replyList = chimeraIO.sendChimeraCommand("listinfo polymers sel", true);
 		if (replyList != null) {
 			parseConnectivityReplies(replyList, rin);
 		}
@@ -921,7 +921,7 @@ public class RINManager {
 		Map<ChimeraResidue, List<double[]>> resCoords = new HashMap<ChimeraResidue, List<double[]>>();
 		for (ChimeraStructuralObject model : chimObjs) {
 			if (model instanceof ChimeraModel) {
-				List<String> reply = chimeraIO.sendChimeraCommand("getcrd "+model.toSpec()+" camera", true);
+				List<String> reply = chimeraIO.sendChimeraCommand("getcrd "+model.toSpec()+" screen", true);
 				if (reply == null) {
 					continue;
 				}
