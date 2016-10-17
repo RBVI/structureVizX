@@ -29,16 +29,15 @@ public class SyncColorsTask extends AbstractTask {
 	}
 
 
-	@Tunable(description = "Direction to synchronize colors", gravity = 1.0)
+	@Tunable(description = "Direction to synchronize colors", gravity = 1.0, context="gui")
 	public ListSingleSelection<Direction> direction = 
 		new ListSingleSelection<>(Direction.FROM_CYTOSCAPE, Direction.FROM_CHIMERA);
-/*
-	@Tunable(description = "Apply colors from current network view to associated Chimera models", gravity = 1.0, dependsOn = "chimeraToCytoscape=false")
-	public boolean cytoscapeToChimera = true;
 
-	@Tunable(description = "Apply colors from associated Chimera models to current network view", gravity = 2.0, dependsOn = "cytoscapeToChimera=false")
+	@Tunable(description = "Apply colors from current network view to associated Chimera models", context="nogui")
+	public boolean cytoscapeToChimera = false;
+
+	@Tunable(description = "Apply colors from associated Chimera models to current network view", context="nogui")
 	public boolean chimeraToCytoscape = false;
-*/
 
 	public SyncColorsTask(StructureManager structureManager, CyNetworkView networkView) {
 		this.structureManager = structureManager;
@@ -59,7 +58,7 @@ public class SyncColorsTask extends AbstractTask {
 				networkView = current;
 			}
 		}
-		if (direction.getSelectedValue() == Direction.FROM_CHIMERA) {
+		if (chimeraToCytoscape || direction.getSelectedValue() == Direction.FROM_CHIMERA) {
 			taskMonitor
 					.setStatusMessage("Applying colors from associated Chimera models to current network view ...");
 			rinManager.syncChimToCyColors(networkView);

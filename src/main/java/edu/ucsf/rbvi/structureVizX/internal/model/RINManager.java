@@ -1101,11 +1101,14 @@ public class RINManager {
 			List<AtomSpec> specList = color2res.get(color);
 			Collections.sort(specList);
 			String spec = AtomSpec.collapseSpecs(specList);
-			String colorDef = "";
+			String colorDef = null;
 			try {
 				float[] rgbColorCodes = color.getRGBColorComponents(null);
 				for (int i = 0; i < rgbColorCodes.length; i++) {
-					colorDef += (int)(rgbColorCodes[i]*255) + ",";
+					if (colorDef == null)
+						colorDef = ""+(int)(rgbColorCodes[i]*255);
+					else
+						colorDef += ","+(int)(rgbColorCodes[i]*255);
 				}
 			} catch (Exception e) {
 				continue;
