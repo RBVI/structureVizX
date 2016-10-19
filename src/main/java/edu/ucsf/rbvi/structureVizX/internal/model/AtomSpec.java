@@ -279,7 +279,7 @@ public class AtomSpec implements Comparable<AtomSpec> {
 				if (specCommand == null) {
 					specCommand = spec.toSpec();
 				} else {
-					endRange(specCommand, residueEnd);
+					specCommand = endRange(specCommand, residueEnd);
 					specCommand += "|"+spec.toSpec();
 				}
 				modelNumber = spec.modelNumber;
@@ -291,7 +291,7 @@ public class AtomSpec implements Comparable<AtomSpec> {
 			}
 
 			if (spec.getSubModelString() != modelSubString) {
-				endRange(specCommand, residueEnd);
+				specCommand = endRange(specCommand, residueEnd);
 				specCommand += "|"+spec.toSpec();
 				modelSubString = spec.getSubModelString();
 				chainId = spec.chain;
@@ -301,7 +301,7 @@ public class AtomSpec implements Comparable<AtomSpec> {
 			}
 
 			if (!spec.chain.equals(chainId)) {
-				endRange(specCommand, residueEnd);
+				specCommand = endRange(specCommand, residueEnd);
 				specCommand += "|"+spec.toSpec();
 				chainId = spec.chain;
 				residueNumber = spec.residueNumber;
@@ -309,7 +309,7 @@ public class AtomSpec implements Comparable<AtomSpec> {
 				continue;
 			}
 
-			if (spec.residueNumber == residueNumber) {
+			if (spec.residueNumber == residueNumber || spec.residueNumber == residueEnd) {
 				continue; // duplicate?
 			}
 

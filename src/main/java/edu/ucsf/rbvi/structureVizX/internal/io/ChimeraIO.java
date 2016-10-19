@@ -89,7 +89,6 @@ public class ChimeraIO {
 			*/
 			command += " "+AtomSpec.collapseSpecs(specs);
 		}
-		// System.out.println("Command = "+sel);
 		select(command);
 	}
 

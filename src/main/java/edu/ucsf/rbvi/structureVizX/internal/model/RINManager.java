@@ -24,6 +24,7 @@ import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.view.vizmap.mappings.DiscreteMapping;
+import org.cytoscape.view.vizmap.mappings.PassthroughMapping;
 import org.cytoscape.application.CyUserLog;
 import org.apache.log4j.Logger;
 
@@ -831,8 +832,9 @@ public class RINManager {
 		for (ChimeraStructuralObject chimObj : chimObjs) {
 			if (chimObj instanceof ChimeraModel) {
 				// get attribute values
-				Map<ChimeraResidue, Object> resValues = chimeraManager.getAttrValues(command,
-						chimObj.getChimeraModel(), true);
+				Map<ChimeraResidue, Object> resValues = 
+				                     chimeraManager.getAttrValues(command,
+						                                              chimObj.getChimeraModel(), false);
 				if (resValues.size() == 0) {
 					continue;
 				}
@@ -856,7 +858,14 @@ public class RINManager {
 					}
 					for (CyIdentifiable cyId : cyObjs) {
 						if (cyId instanceof CyNode && network.containsNode((CyNode) cyId)) {
-							network.getRow(cyId).set(resAttr, resValues.get(res));
+							// Special case ribbon_color to remove the alpha
+							if (command.equals("ribbon_color")) {
+								String[] colors = ((String)resValues.get(res)).split(",");
+								String color = colors[0]+","+colors[1]+","+colors[2];
+								network.getRow(cyId).set(resAttr, color);
+							} else {
+								network.getRow(cyId).set(resAttr, resValues.get(res));
+							}
 						}
 					}
 				}
@@ -1017,61 +1026,24 @@ public class RINManager {
 		// if (network.getDefaultNodeTable().getColumn("chimeraColor") == null) {
 		// network.getDefaultNodeTable().createColumn("chimeraColor", String.class, false);
 		// }
-		Set<ChimeraStructuralObject> chimObjs = structureManager.getAssociatedChimObjs(network);
-		if (chimObjs == null) {
-			return;
-		}
-		Map<Long, Paint> nodeToColorMapping = new HashMap<Long, Paint>();
-		for (ChimeraStructuralObject chimObj : chimObjs) {
-			if (chimObj instanceof ChimeraModel) {
-				// get attribute values
-				Map<ChimeraResidue, Object> resValues = chimeraManager.getAttrValues("ribbon_color",
-						chimObj.getChimeraModel(), false);
-				if (resValues.size() == 0) {
-					continue;
-				}
-				// save all the values
-				for (ChimeraResidue res : resValues.keySet()) {
-					Set<CyIdentifiable> cyObjs = structureManager.getAssociatedCyObjs(res);
-					if (cyObjs == null) {
-						continue;
-					}
-					for (CyIdentifiable cyId : cyObjs) {
-						if (cyId instanceof CyNode && network.containsNode((CyNode) cyId)) {
-							String[] rgb = ((String) resValues.get(res)).split(",");
-							if (rgb.length == 4) {
-								try {
-									Color resColor = new Color(Integer.valueOf(rgb[0]),
-											Integer.valueOf(rgb[1]), Integer.valueOf(rgb[2]));
-									nodeToColorMapping.put(cyId.getSUID(), resColor);
-									// network.getRow(cyId).set("chimeraColor",
-									// resColor.toString());
-									// networkView.getNodeView((CyNode) cyId).clearValueLock(
-									// BasicVisualLexicon.NODE_FILL_COLOR);
-									// networkView.getNodeView((CyNode) cyId).setVisualProperty(
-									// BasicVisualLexicon.NODE_FILL_COLOR, resColor);
-								} catch (NumberFormatException ex) {
-									// ignore
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		// get attribute values
+		annotate(network, "ribbon_color", "ribbon_color");
+
 		// TODO: [Optional] Use passthrough mapping if working
-		// VisualMappingFunctionFactory vmfFactoryP = (VisualMappingFunctionFactory)
-		// structureManager
-		// .getService(VisualMappingFunctionFactory.class, "(mapping.type=passthrough)");
-		// PassthroughMapping colorMapping = (PassthroughMapping) vmfFactoryP
-		// .createVisualMappingFunction("chimeraColor", String.class,
-		// BasicVisualLexicon.NODE_FILL_COLOR);
+		VisualMappingFunctionFactory vmfFactoryP = (VisualMappingFunctionFactory)
+		                                            structureManager.getService(VisualMappingFunctionFactory.class, 
+																								                            "(mapping.type=passthrough)");
+		PassthroughMapping nodeColorMapping = (PassthroughMapping) 
+		                                   vmfFactoryP.createVisualMappingFunction("ribbon_color", 
+																			 String.class, BasicVisualLexicon.NODE_FILL_COLOR);
+		/*
 		VisualMappingFunctionFactory vmfFactoryD = (VisualMappingFunctionFactory) structureManager
 				.getService(VisualMappingFunctionFactory.class, "(mapping.type=discrete)");
 		DiscreteMapping<Long, Paint> nodeColorMapping = (DiscreteMapping<Long, Paint>) vmfFactoryD
 				.createVisualMappingFunction(CyIdentifiable.SUID, Long.class,
 						BasicVisualLexicon.NODE_FILL_COLOR);
 		nodeColorMapping.putAll(nodeToColorMapping);
+		*/
 		VisualMappingManager manager = (VisualMappingManager) structureManager
 				.getService(VisualMappingManager.class);
 		VisualStyle vs = manager.getCurrentVisualStyle();

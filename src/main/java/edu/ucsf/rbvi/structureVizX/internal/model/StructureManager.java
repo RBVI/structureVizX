@@ -601,7 +601,7 @@ public class StructureManager {
 		}
 
 		if (specList.size() > 0) {
-			// System.out.println("Selecting "+selSpec);
+			System.out.println("Selecting "+specList);
 			chimera.select("sel", specList);
 		} else {
 			chimera.select("~sel", specList);
