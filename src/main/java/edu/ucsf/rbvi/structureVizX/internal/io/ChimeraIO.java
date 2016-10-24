@@ -124,16 +124,17 @@ public class ChimeraIO {
 
 		// See if we can talk
 		List<String> reply = sendChimeraCommandInternal("windowsize", false);
-		structureManager.logError("Unable to establish communication with ChimeraX");
 		if (reply != null) {
 			chimeraLaunched = true;
 			return true;
 		}
+		structureManager.logError("Unable to establish communication with ChimeraX");
 		chimeraLaunched = false;
 		return false;
 	}
 
 	public boolean launchChimera(List<String> chimeraPaths) {
+		int port = 0;
 		// Do nothing if Chimera is already launched
 		if (isChimeraLaunched()) {
 			return true;
@@ -141,6 +142,7 @@ public class ChimeraIO {
 
 		// Try to launch Chimera (eventually using one of the possible paths)
 		String error = "Error message: ";
+		String warnings = "";
 		String workingPath = "";
 		// iterate over possible paths for starting Chimera
 		for (String chimeraPath : chimeraPaths) {
@@ -160,33 +162,46 @@ public class ChimeraIO {
 				ProcessBuilder pb = new ProcessBuilder(args);
 				chimera = pb.start();
 				BufferedReader reader = new BufferedReader(new InputStreamReader(chimera.getInputStream()));
-				String line = reader.readLine();
-				if (line.startsWith("REST server started on host 127.0.0.1 port ")) {
-					int offset = line.indexOf("port ")+5;
-					int port = Integer.parseInt(line.trim().substring(offset));
-					chimeraREST = "http://127.0.0.1:"+port+"/run?";
-					error = "";
-				} else {
-					error += line.trim();
+				String line;
+			 	while ((line	= reader.readLine()) != null) {
+					if (line.startsWith("REST server started on host 127.0.0.1 port ")) {
+						int offset = line.indexOf("port ")+5;
+						port = Integer.parseInt(line.trim().substring(offset));
+						error = "";
+						break;
+					} else if (line.startsWith("warning:") || line.startsWith("WARNING")) {
+						// Chimera warning messages
+						structureManager.logWarning("From ChimeraX "+line.trim());
+					} else if (line.contains("chromium")) {
+						// Chromium errors -- ignore
+						continue;
+					} else {
+						error += line;
+						break;
+					}
 				}
 				workingPath = chimeraPath;
 				// System.out.println("chimeraREST = "+chimeraREST);
-				structureManager.logInfo("Strarting " + chimeraPath);
+				structureManager.logInfo("Starting " + chimeraPath + " with REST port "+port);
 				break;
 			} catch (Exception e) {
 				// Chimera could not be started
-				System.out.println("Exception: "+e.getMessage());
+				structureManager.logError("Unable to launch ChimeraX: "+e.getMessage());
 				error += e.getMessage();
 			}
 		}
 		// If no error, then Chimera was launched successfully
 		if (error.length() == 0) {
-			// Initialize the listener threads
-			structureManager.setChimeraPathProperty(workingPath);
-			// TODO: [Optional] Check Chimera version and show a warning if below 1.8
-			// Ask Chimera to give us updates
-			startListening();
-			return true;
+			if (initChimera(port)) {
+				// Initialize the listener threads
+				structureManager.setChimeraPathProperty(workingPath);
+				// TODO: [Optional] Check Chimera version and show a warning if below 1.8
+				// Ask Chimera to give us updates
+				startListening();
+				return true;
+			} else {
+				return false;
+			}
 		}
 
 		// Tell the user that Chimera could not be started because of an error
@@ -222,15 +237,17 @@ public class ChimeraIO {
 						.setSocketTimeout(SOCKET_TIMEOUT*1000).build();
 		CloseableHttpClient client = HttpClients.custom().setDefaultRequestConfig(globalConfig).build();
 		String args = URLEncoder.encode(command);
-		System.out.println("Sending: '"+command+"'");
+		System.out.print("Sending: '"+command+"' ... ");
 		HttpGet request = new HttpGet(chimeraREST+"command="+args);
 		CloseableHttpResponse response1 = null;
 		try {
 			response1 = client.execute(request);
 			HttpEntity entity1 = response1.getEntity();
 			InputStream entityStream = entity1.getContent();
-			if (entity1.getContentLength() == 0)
+			if (entity1.getContentLength() == 0) {
+				System.out.println("done - no response");
 				return response;
+			}
 			BufferedReader reader = new BufferedReader(new InputStreamReader(entityStream));
 			String inputLine;
 			while ((inputLine = reader.readLine()) != null) {
@@ -241,6 +258,7 @@ public class ChimeraIO {
 			EntityUtils.consume(entity1);
 
 		} catch (Exception e) {
+			System.out.println("failed!");
 			structureManager.logWarning("Unable to execute command: "+command+" ("+e.getMessage()+")");
 			structureManager.getChimeraManager().clearOnChimeraExit();
 			chimera = null;
@@ -250,6 +268,7 @@ public class ChimeraIO {
 			if (request != null)
 				request.releaseConnection();
 		}
+		System.out.println("done");
 		return response;
 	}
 

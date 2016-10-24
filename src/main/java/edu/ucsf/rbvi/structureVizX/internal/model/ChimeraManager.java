@@ -57,6 +57,15 @@ public class ChimeraManager {
 				models.add(model);
 			}
 		}
+
+		// If we didn't find the model, see if it's an atom spec
+		if (modelName.indexOf("#") >= 0) {
+			AtomSpec spec = AtomSpec.getChimeraXAtomSpec(modelName, structureManager);
+			if (spec != null) {
+				ChimeraModel model = getChimeraModel(spec);
+				models.add(model);
+			}
+		}
 		return models;
 	}
 
@@ -191,6 +200,8 @@ public class ChimeraManager {
 	}
 
 	public void closeModel(ChimeraModel model) {
+		if (model == null) return;
+
 		chimera.stopListening();
 		structureManager.logInfo("chimera close model " + model.getModelName());
 		if (currentModelsMap.containsKey(ChimUtils.makeModelKey(model.getModelNumber(),

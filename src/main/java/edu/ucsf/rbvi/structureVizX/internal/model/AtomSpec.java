@@ -70,6 +70,8 @@ public class AtomSpec implements Comparable<AtomSpec> {
 	 * This method takes a Cytoscape attribute specification ([structure[.modelNo]#][residue][.chainID]) where
 	 * structure := 4-character code | "URL" | "path" and
 	 * creates an atom spec.  Note that this is NOT a ChimeraX atom spec!
+	 *
+	 * TODO: need to handle multiple residues and residue ranges!
 	 */
 	public static AtomSpec getAttributeAtomSpec(String attribute, StructureManager structureManager) {
 		AtomSpec spec = new AtomSpec();

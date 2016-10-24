@@ -19,6 +19,7 @@ import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.util.ListMultipleSelection;
 
+import edu.ucsf.rbvi.structureVizX.internal.model.AtomSpec;
 import edu.ucsf.rbvi.structureVizX.internal.model.ChimeraModel;
 import edu.ucsf.rbvi.structureVizX.internal.model.CytoUtils;
 import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager;
@@ -43,6 +44,9 @@ public class CloseStructuresTask extends AbstractTask {
 
 	@Tunable(description = "List of models to close", context = "nogui")
 	public ListMultipleSelection<String> modelList = new ListMultipleSelection<String>("");
+
+	@Tunable(description = "ChimeraX model number to close", context = "nogui", tooltip = "Use proper atom spec (start with #)")
+	public String atomSpec = "";
 
 	public CloseStructuresTask(StructureManager structureManager) {
 		this.structureManager = structureManager;
@@ -120,6 +124,17 @@ public class CloseStructuresTask extends AbstractTask {
 		if (modelList.getSelectedValues().size() > 0) {
 			models = new HashSet<String>(modelList.getSelectedValues());
 		}
+
+		// Get model from atom spec
+		if (atomSpec.indexOf("#") >= 0) {
+			AtomSpec spec = AtomSpec.getChimeraXAtomSpec(atomSpec, structureManager);
+			if (spec != null) {
+				ChimeraModel model = structureManager.getChimeraManager().getChimeraModel(spec);
+				if (model != null)
+					models.add(atomSpec);
+			}
+		}
+
 		if (models.size() > 0) {
 			structureManager.closeStructures(models);
 		} else {
