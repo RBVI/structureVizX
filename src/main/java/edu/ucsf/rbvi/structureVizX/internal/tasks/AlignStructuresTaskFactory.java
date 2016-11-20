@@ -29,6 +29,7 @@ public class AlignStructuresTaskFactory extends AbstractTaskFactory implements
 	}
 
 	public boolean isReady(CyNetworkView netView) {
+		if (netView == null) return false;
 		// Get all of the selected nodes
 		List<CyIdentifiable> nodeList = new ArrayList<CyIdentifiable>();
 		nodeList.addAll(CyTableUtil.getNodesInState(netView.getModel(), CyNetwork.SELECTED, true));
@@ -42,6 +43,7 @@ public class AlignStructuresTaskFactory extends AbstractTaskFactory implements
 	}
 
 	public boolean isReady(View<CyNode> nodeView, CyNetworkView netView) {
+		if (netView == null || nodeView == null) return false;
 		// Get all of the selected nodes
 		List<CyIdentifiable> nodeList = new ArrayList<CyIdentifiable>();
 		nodeList.add(nodeView.getModel());

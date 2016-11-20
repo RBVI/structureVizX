@@ -27,6 +27,7 @@ public class CloseStructuresTaskFactory extends AbstractTaskFactory implements T
 	}
 
 	public boolean isReady(CyNetworkView netView) {
+		if (netView == null) return false;
 		// Get all of the selected nodes
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.addAll(CyTableUtil.getNodesInState(netView.getModel(), CyNetwork.SELECTED,

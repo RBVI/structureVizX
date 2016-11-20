@@ -150,6 +150,17 @@ public class ChimeraManager {
 		// Get the current list of open models
 		List<ChimeraModel> modelList = getModelList();
 
+		String name = null;
+		// Check to see if we are actually loading from files.  If so,
+		// override the name
+		if (modelPath.endsWith(".pdb") || modelPath.endsWith(".cif")) {
+			File path = new File(modelPath); // Make it a file object
+			if (path.isFile()) {
+				name = path.getName();
+				name = name.substring(0, name.length()-4); // Strip off the suffix
+			}
+		}
+
 		// TODO: [Optional] Handle modbase models
 		if (type == ModelType.MODBASE_MODEL) {
 			response = chimera.sendChimeraCommand("open modbase:" + modelPath, true);
@@ -157,7 +168,10 @@ public class ChimeraManager {
 			// response = chimera.sendChimeraCommand("open smiles:" + modelName, true);
 			// modelName = "smiles:" + modelName;
 		} else {
-			response = chimera.sendChimeraCommand("open " + modelPath, true);
+			if (name == null)
+				response = chimera.sendChimeraCommand("open " + modelPath, true);
+			else
+				response = chimera.sendChimeraCommand("open " + modelPath + " name " + name, true);
 		}
 		if (response == null) {
 			// something went wrong

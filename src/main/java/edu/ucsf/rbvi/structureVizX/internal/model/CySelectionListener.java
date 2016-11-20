@@ -15,12 +15,16 @@ import org.cytoscape.model.events.RowsSetListener;
 public class CySelectionListener implements RowsSetListener {
 
 	private StructureManager structureManager;
+	private boolean silence = false;
 
 	public CySelectionListener(StructureManager manager) {
 		this.structureManager = manager;
 	}
 
 	public void handleEvent(RowsSetEvent e) {
+		if (silence)
+			return;
+
 		if (!structureManager.getChimeraManager().isChimeraLaunched()) {
 			return;
 		}
@@ -76,4 +80,6 @@ public class CySelectionListener implements RowsSetListener {
 			*/
 		}
 	}
+
+	public void silence(boolean silence) { this.silence = silence; }
 }

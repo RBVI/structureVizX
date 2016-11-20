@@ -34,6 +34,7 @@ public class PaintStructureTaskFactory extends AbstractTaskFactory implements No
 	}
 
 	public boolean isReady(View<CyNode> nodeView, CyNetworkView netView) {
+		if (netView == null || nodeView == null) return false;
 		// This only applies to the target node, so we just use the context
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.add(nodeView.getModel());

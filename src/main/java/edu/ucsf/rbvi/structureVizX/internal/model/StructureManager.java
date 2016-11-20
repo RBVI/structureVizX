@@ -130,6 +130,14 @@ public class StructureManager {
 		}
 	}
 
+	public void registerService(Object object, Class<?> serviceClass, Properties props) {
+		registrar.registerService(object, serviceClass, props);
+	}
+
+	public void unregisterService(Object object, Class<?> serviceClass) {
+		registrar.unregisterService(object, serviceClass);
+	}
+
 	public void setCreateStructureNetFactory(TaskFactory factory) {
 		this.structureNetFactory = (CreateStructureNetworkTaskFactory) factory;
 	}
