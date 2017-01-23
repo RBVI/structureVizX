@@ -33,6 +33,7 @@ public class OpenStructuresEdgeTaskFactory extends AbstractTaskFactory implement
 	}
 
 	public boolean isReady(CyNetworkView netView) {
+		if (netView == null) return false;
 		// Get all of the selected nodes/edges
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.addAll(CyTableUtil.getEdgesInState(netView.getModel(), CyNetwork.SELECTED,
@@ -49,6 +50,7 @@ public class OpenStructuresEdgeTaskFactory extends AbstractTaskFactory implement
 	}
 
 	public boolean isReady(View<CyEdge> edgeView, CyNetworkView netView) {
+		if (netView == null || edgeView == null) return false;
 		// Get all of the selected nodes
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.add(edgeView.getModel());

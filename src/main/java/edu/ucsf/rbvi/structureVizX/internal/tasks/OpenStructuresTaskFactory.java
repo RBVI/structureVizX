@@ -30,6 +30,7 @@ public class OpenStructuresTaskFactory extends AbstractTaskFactory implements Ta
 	}
 
 	public boolean isReady(CyNetworkView netView) {
+		if (netView == null) return false;
 		// Get all of the selected nodes/edges
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.addAll(CyTableUtil.getNodesInState(netView.getModel(), CyNetwork.SELECTED,
@@ -50,6 +51,7 @@ public class OpenStructuresTaskFactory extends AbstractTaskFactory implements Ta
 	}
 
 	public boolean isReady(View<CyNode> nodeView, CyNetworkView netView) {
+		if (netView == null || nodeView == null) return false;
 		// Get all of the selected nodes
 		List<CyIdentifiable> selectedList = new ArrayList<CyIdentifiable>();
 		selectedList.add(nodeView.getModel());
