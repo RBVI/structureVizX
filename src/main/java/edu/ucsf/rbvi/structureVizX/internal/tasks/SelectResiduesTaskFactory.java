@@ -23,6 +23,7 @@ public class SelectResiduesTaskFactory extends AbstractTaskFactory implements No
 	}
 
 	public boolean isReady(View<CyNode> nodeView, CyNetworkView networkView) {
+		if (networkView == null || nodeView == null) return false;
 		// Check for functional residues
 		List<String> residueList = structureManager.getResidueList(networkView.getModel(),
 				nodeView.getModel());

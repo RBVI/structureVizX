@@ -56,6 +56,8 @@ import edu.ucsf.rbvi.structureVizX.internal.tasks.SelectResiduesTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.SelectionChangedTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.SendCommandTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.ShowDialogTaskFactory;
+import edu.ucsf.rbvi.structureVizX.internal.tasks.StartListeningTaskFactory;
+import edu.ucsf.rbvi.structureVizX.internal.tasks.StopListeningTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.StructureVizSettingsTaskFactory;
 import edu.ucsf.rbvi.structureVizX.internal.tasks.SyncColorsTaskFactory;
 
@@ -410,6 +412,24 @@ public class CyActivator extends AbstractCyActivator {
 										"Notify structureVizX of existing ChimeraX process");
 		chimeraProcessTaskProperties.setProperty(COMMAND_NAMESPACE, "structureViz");
 		registerService(bc, chimeraProcessTaskFactory, TaskFactory.class, chimeraProcessTaskProperties);
+
+		TaskFactory stopListeningTaskFactory = 
+						new StopListeningTaskFactory(structureManager, 
+		                                     selectionListener, networkListener);
+		Properties stopListeningTaskProperties = new Properties();
+		stopListeningTaskProperties.setProperty(COMMAND, "stopListening");
+		stopListeningTaskProperties.setProperty(COMMAND_DESCRIPTION, "Stop all listeners.");
+		stopListeningTaskProperties.setProperty(COMMAND_NAMESPACE, "structureViz");
+		registerService(bc, stopListeningTaskFactory, TaskFactory.class, stopListeningTaskProperties);
+
+		TaskFactory startListeningTaskFactory = 
+						new StartListeningTaskFactory(structureManager,
+		                                      selectionListener, networkListener);
+		Properties startListeningTaskProperties = new Properties();
+		startListeningTaskProperties.setProperty(COMMAND, "startListening");
+		startListeningTaskProperties.setProperty(COMMAND_DESCRIPTION, "Start all listeners.");
+		startListeningTaskProperties.setProperty(COMMAND_NAMESPACE, "structureViz");
+		registerService(bc, startListeningTaskFactory, TaskFactory.class, startListeningTaskProperties);
 	}
 
 }
