@@ -158,7 +158,7 @@ public class ChimeraIO {
 				List<String> args = new ArrayList<String>();
 				args.add(chimeraPath);
 				args.add("--cmd");
-				args.add("rest start");
+				args.add("remotecontrol rest start");
 				ProcessBuilder pb = new ProcessBuilder(args);
 				chimera = pb.start();
 				BufferedReader reader = new BufferedReader(new InputStreamReader(chimera.getInputStream()));
