@@ -237,7 +237,7 @@ public class ChimeraManager {
 
 	public Map<String, ChimeraModel> getSelectedModels() {
 		Map<String, ChimeraModel> selectedModelsMap = new HashMap<String, ChimeraModel>();
-		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level molecule", true);
+		List<String> chimeraReply = chimera.sendChimeraCommand("info selection level molecule", true);
 		if (chimeraReply != null) {
 			for (String modelLine : chimeraReply) {
 				AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
@@ -252,7 +252,7 @@ public class ChimeraManager {
 
 	public List<String> getSelectedResidueSpecs() {
 		List<String> selectedResidues = new ArrayList<String>();
-		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level residue", true);
+		List<String> chimeraReply = chimera.sendChimeraCommand("info selection level residue", true);
 		if (chimeraReply != null) {
 			for (String inputLine : chimeraReply) {
 				AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, structureManager);
@@ -267,7 +267,7 @@ public class ChimeraManager {
 	}
 
 	public void getSelectedResidues(Map<String, ChimeraModel> selectedModelsMap) {
-		List<String> chimeraReply = chimera.sendChimeraCommand("listinfo selection level residue", true);
+		List<String> chimeraReply = chimera.sendChimeraCommand("info selection level residue", true);
 		if (chimeraReply != null) {
 			for (String inputLine : chimeraReply) {
 				AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, structureManager);
@@ -292,13 +292,15 @@ public class ChimeraManager {
 	// TODO: [Optional] Handle smiles names in a better way in Chimera?
 	public List<ChimeraModel> getModelList() {
 		List<ChimeraModel> modelList = new ArrayList<ChimeraModel>();
-		List<String> list = chimera.sendChimeraCommand("listinfo models type AtomicStructure", true);
+		List<String> list = chimera.sendChimeraCommand("info models type AtomicStructure", true);
 		if (list != null && list.size() > 0) {
 			for (String modelLine : list) {
-				// System.out.println("getModelList: line: '"+modelLine+"'");
-				AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
-				ChimeraModel chimeraModel = new ChimeraModel(spec);
-				modelList.add(chimeraModel);
+				if (modelLine != null && modelLine.length() > 0) {
+					// System.out.println("getModelList: line: '"+modelLine+"'");
+					AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
+					ChimeraModel chimeraModel = new ChimeraModel(spec);
+					modelList.add(chimeraModel);
+				}
 			}
 		}
 		return modelList;
@@ -335,7 +337,7 @@ public class ChimeraManager {
 	 * @return the default model Color for this model in Chimera
 	 */
 	public Color getModelColor(ChimeraModel model) {
-		List<String> colorLines = chimera.sendChimeraCommand("listinfo models " + model.toSpec()
+		List<String> colorLines = chimera.sendChimeraCommand("info models " + model.toSpec()
 				+ " attribute color type AtomicStructure", true);
 		if (colorLines == null || colorLines.size() == 0) {
 			return null;
@@ -355,7 +357,7 @@ public class ChimeraManager {
 	public void addResidues(ChimeraModel model) {
 		String modelString = ChimUtils.getModelString(model);
 		// Get the list -- it will be in the reply log
-		List<String> reply = chimera.sendChimeraCommand("listinfo residues " + model.toSpec(), true);
+		List<String> reply = chimera.sendChimeraCommand("info residues " + model.toSpec(), true);
 		if (reply == null) {
 			return;
 		}
@@ -370,7 +372,7 @@ public class ChimeraManager {
 
 	public List<String> getAttrList() {
 		List<String> attributes = new ArrayList<String>();
-		final List<String> reply = chimera.sendChimeraCommand("listinfo resattr", true);
+		final List<String> reply = chimera.sendChimeraCommand("info resattr", true);
 		if (reply != null) {
 			for (String inputLine : reply) {
 				String[] lineParts = inputLine.split("\\s");
@@ -388,7 +390,7 @@ public class ChimeraManager {
 		String sel = model.toSpec();
 		if (useSel)
 			sel = "sel";
-		final List<String> reply = chimera.sendChimeraCommand("listinfo residue " + sel
+		final List<String> reply = chimera.sendChimeraCommand("info residue " + sel
 				+ " attribute " + aCommand, true);
 		if (reply != null) {
 			for (String inputLine : reply) {

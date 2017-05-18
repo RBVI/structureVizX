@@ -115,7 +115,7 @@ public class RINManager {
 
 	public void includeConnectivity(CyNetwork rin) {
 		// System.out.println("Getting connectivity");
-		List<String> replyList = chimeraIO.sendChimeraCommand("listinfo polymers sel", true);
+		List<String> replyList = chimeraIO.sendChimeraCommand("info polymers sel", true);
 		if (replyList != null) {
 			parseConnectivityReplies(replyList, rin);
 		}
