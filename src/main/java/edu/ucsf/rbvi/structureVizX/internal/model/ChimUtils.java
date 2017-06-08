@@ -208,7 +208,7 @@ public abstract class ChimUtils {
 				} else {
 					for (String str : values) {
 						AtomSpec spec = AtomSpec.getAttributeAtomSpec(str.trim(), manager);
-						if (spec.getName() != null) {
+						if (spec != null && spec.getName() != null) {
 							cellList.add(spec.getName());
 						}
 					}

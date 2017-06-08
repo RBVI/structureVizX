@@ -74,6 +74,9 @@ public class AtomSpec implements Comparable<AtomSpec> {
 	 * TODO: need to handle multiple residues and residue ranges!
 	 */
 	public static AtomSpec getAttributeAtomSpec(String attribute, StructureManager structureManager) {
+		if (attribute == null || attribute.length() == 0)
+			return null;
+
 		AtomSpec spec = new AtomSpec();
 
 		// [pdbID[.modelNo]#][residueID][.chainID]
