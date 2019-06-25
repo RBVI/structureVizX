@@ -63,9 +63,11 @@ public class ChimeraModel implements ChimeraStructuralObject {
 		this.chainMap = new TreeMap<String, ChimeraChain>();
 		this.cyObjects = new HashMap<CyIdentifiable, CyNetwork>();
 		this.funcResidues = new HashSet<ChimeraResidue>();
+		System.out.println("ChimeraModel: "+name);
 	}
 
 	public ChimeraModel(AtomSpec spec) {
+		System.out.println("ChimeraModel: "+spec);
 		specInit(spec);
 	}
 
@@ -79,6 +81,7 @@ public class ChimeraModel implements ChimeraStructuralObject {
 	// invoked when listing models: listm type molecule; lists level molecule
 	// line = model id #0 type AtomicStructure name 1ert
 	public ChimeraModel(String inputLine) {
+		System.out.println("ChimeraModel: "+inputLine);
 		AtomSpec spec = AtomSpec.getListInfoAtomSpec(inputLine, null);
 		specInit(spec);
 	}

@@ -237,10 +237,11 @@ public class ChimeraManager {
 
 	public Map<String, ChimeraModel> getSelectedModels() {
 		Map<String, ChimeraModel> selectedModelsMap = new HashMap<String, ChimeraModel>();
-		List<String> chimeraReply = chimera.sendChimeraCommand("info selection level molecule", true);
+		List<String> chimeraReply = chimera.sendChimeraCommand("info selection level model", true);
 		if (chimeraReply != null) {
 			for (String modelLine : chimeraReply) {
 				AtomSpec spec = AtomSpec.getListInfoAtomSpec(modelLine, structureManager);
+				System.out.println("Model line = "+modelLine+", spec = "+spec.toString());
 				ChimeraModel chimeraModel = new ChimeraModel(spec);
 				String modelKey = ChimUtils.makeModelKey(chimeraModel.getModelNumber(),
 						chimeraModel.getSubModelIds());

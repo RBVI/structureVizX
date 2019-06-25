@@ -32,6 +32,7 @@
  */
 package edu.ucsf.rbvi.structureVizX.internal.ui;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Frame;
@@ -41,11 +42,12 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.swing.AbstractAction;
-import javax.swing.JDialog;
+import javax.swing.Icon;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTree;
@@ -63,6 +65,11 @@ import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.application.swing.CytoPanelComponent2;
+import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.application.swing.CytoPanelState;
+
 import edu.ucsf.rbvi.structureVizX.internal.io.ChimeraIO;
 import edu.ucsf.rbvi.structureVizX.internal.model.ChimeraManager;
 import edu.ucsf.rbvi.structureVizX.internal.model.ChimeraModel;
@@ -76,7 +83,7 @@ import edu.ucsf.rbvi.structureVizX.internal.model.StructureManager;
 // TODO: [Bug] Selection in tree: FIXED?
 // Something goes wrong when the tree has been collapsed with selected residues and is expanded
 // again
-public class ModelNavigatorDialog extends JDialog implements TreeSelectionListener,
+public class ModelNavigatorDialog extends JPanel implements CytoPanelComponent2, TreeSelectionListener,
 		TreeExpansionListener, TreeWillExpandListener {
 
 	private static final long serialVersionUID = -1695555416220985117L;
@@ -135,15 +142,15 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 	 */
 	public ModelNavigatorDialog(Frame parent, StructureManager structureManager) {
 		// super(parent);
-		super();
-		setTitle("Cytoscape Molecular Structure Navigator");
+		// super();
+		// setTitle("Cytoscape Molecular Structure Navigator");
 		this.structureManager = structureManager;
 		this.chimeraManager = structureManager.getChimeraManager();
 		this.chimeraIO = structureManager.getChimeraIO();
 		initComponents();
-		if (parent != null) {
-		 	setLocationRelativeTo(parent);
-		}
+		// if (parent != null) {
+		//  	setLocationRelativeTo(parent);
+		// }
 		// status = false;
 	}
 
@@ -175,7 +182,6 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 			alignMenu.setEnabled(false);
 		structureManager.chimeraSelectionChanged();
 		ignoreDialogSelection = false;
-		pack();
 	}
 
 	/**
@@ -357,14 +363,15 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 	 * This method initializes all of the graphical components in the dialog.
 	 */
 	private void initComponents() {
+		setLayout(new BorderLayout());
+
 		selectionDependentMenus = new ArrayList<JMenuItem>();
 		// int modelCount =
 		// structureManager.getChimeraManager().getChimeraModelsCount();
 
-		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
 		// Initialize the menus
 		JMenuBar menuBar = new JMenuBar();
+		add(menuBar, BorderLayout.NORTH);
 
 		// Chimera menu
 		JMenu chimeraMenu = new JMenu("Chimera");
@@ -470,8 +477,6 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 		addMenuItem(selectMenu, "Clear selection", COMMAND, "~select");
 		menuBar.add(selectMenu);
 
-		setJMenuBar(menuBar);
-
 		// Initialize the tree
 		navigationTree = new JTree();
 		treeModel = new ChimeraTreeModel(chimeraManager, navigationTree);
@@ -492,7 +497,7 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 
 		JScrollPane treeView = new JScrollPane(navigationTree);
 
-		setContentPane(treeView);
+		add(treeView, BorderLayout.CENTER);
 
 		enableMenuItems(0);
 	}
@@ -587,6 +592,33 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 			item.setEnabled(enable);
 		}
 	}
+	 public void hideCytoPanel() {
+    structureManager.unregisterService(this, CytoPanelComponent.class);
+  }
+
+  public String getIdentifier() {
+    return "edu.ucsf.rbvi.structureVizX.StructureViz";
+  }
+
+  public Component getComponent() {
+    // TODO Auto-generated method stub
+    return this;
+  }
+
+  public CytoPanelName getCytoPanelName() {
+    // TODO Auto-generated method stub
+    return CytoPanelName.EAST;
+  }
+
+  public Icon getIcon() {
+		// FIXME
+    // return icon;
+		return null;
+  }
+
+  public String getTitle() {
+    return "StructureViz";
+  }
 
 	// Embedded classes
 
@@ -758,8 +790,8 @@ public class ModelNavigatorDialog extends JDialog implements TreeSelectionListen
 
 	class ChimeraLost implements Runnable {
 
-		JDialog nav = null;
-		public ChimeraLost(JDialog nav) { this.nav = nav; }
+		JPanel nav = null;
+		public ChimeraLost(JPanel nav) { this.nav = nav; }
 
 		public void run() {
 			JOptionPane.showMessageDialog(nav, "Lost connection to Chimera! structureViz must exit",

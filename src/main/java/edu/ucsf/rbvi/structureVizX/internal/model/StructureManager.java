@@ -1,5 +1,6 @@
 package edu.ucsf.rbvi.structureVizX.internal.model;
 
+import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,6 +16,12 @@ import java.util.Set;
 import org.cytoscape.application.CyApplicationConfiguration;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.CySwingApplication;
+import org.cytoscape.application.swing.CytoPanel;
+import org.cytoscape.application.swing.CytoPanelComponent;
+import org.cytoscape.application.swing.CytoPanelComponent2;
+import org.cytoscape.application.swing.CytoPanelName;
+import org.cytoscape.application.swing.CytoPanelState;
+
 import org.cytoscape.model.CyColumn;
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyIdentifiable;
@@ -957,10 +964,30 @@ public class StructureManager {
 		// }
 		if (mnDialog == null) {
 			CySwingApplication cyApplication = (CySwingApplication) getService(CySwingApplication.class);
-			mnDialog = new ModelNavigatorDialog(cyApplication.getJFrame(), this);
-			mnDialog.pack();
+			CytoPanel cytoPanel = cyApplication.getCytoPanel(CytoPanelName.EAST);
+
+			// If the panel is not already registered, create it
+			if (cytoPanel.indexOfComponent("edu.ucsf.rbvi.structureVizX.StructureViz") < 0) {
+				mnDialog = new ModelNavigatorDialog(cyApplication.getJFrame(), this);
+
+				// Register it
+				registerService(mnDialog, CytoPanelComponent.class, new Properties());
+
+				if (cytoPanel.getState() == CytoPanelState.HIDE)
+						cytoPanel.setState(CytoPanelState.DOCK);
+
+			} 
+			/*
+			else if (!cytoPanel.indexOfComponent("edu.ucsf.rbvi.structureVizX.StructureViz") >= 0) {
+				int compIndex = cytoPanel.indexOfComponent("edu.ucsf.rbvi.structureVizX.StructureViz");
+				Component panel = cytoPanel.getComponentAt(compIndex);
+				if (panel instanceof CytoPanelComponent2) {
+					// Unregister it
+					unregisterService(panel, CytoPanelComponent.class);
+				}
+			}
+			*/
 		}
-		mnDialog.setVisible(true);
 	}
 
 	public boolean isMNDialogOpen() {

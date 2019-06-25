@@ -22,6 +22,7 @@ public class AtomSpec implements Comparable<AtomSpec> {
 
 	private String modelName; // The possible name of this model
 	private int modelNumber; // The model number
+	private int[] subModelNumbers; // sub-model numbers for this residue
 	private String[] subModelIds; // sub-model identifiers for this residue
 
 	private String chain;
@@ -246,7 +247,17 @@ public class AtomSpec implements Comparable<AtomSpec> {
 			}
 		} else if (modelID.startsWith("#")) {
 			modelID = modelID.substring(1);
-			spec.modelNumber = Integer.valueOf(modelID);
+
+			// Check for submodels
+			String[] modelIDNo = modelID.split("\\.");
+			spec.modelNumber = Integer.valueOf(modelIDNo[0]);
+			if (modelIDNo.length > 1) {
+				spec.subModelNumbers = new int[modelIDNo.length-1];
+
+				for (int id=1; id < modelIDNo.length; id++) {
+					spec.subModelNumbers[id-1] = Integer.valueOf(modelIDNo[id]);
+				}
+			}
 		} else {
 			String[] modelIDNo = modelID.split("\\.");
 			if (modelIDNo.length == 1) {

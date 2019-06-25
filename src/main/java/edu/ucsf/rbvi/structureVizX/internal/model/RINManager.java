@@ -204,7 +204,7 @@ public class RINManager {
 		// atomspec2 = "test self";
 		// }
 		// Create the command
-		String command = "findclash " + atomspec1
+		String command = "clash " + atomspec1
 				+ " makePseudobonds false log true namingStyle command overlapCutoff "
 				+ overlapCutoff + " hbondAllowance " + hbondAllowance + " bondSeparation "
 				+ bondSep + " " + atomspec2;
@@ -221,19 +221,19 @@ public class RINManager {
 		// "Within selection"
 		if (includeInteractions == 0) {
 			// Limit H-bond detection to H-bonds with both atoms selected
-			atomspec = "selRestrict both";
+			atomspec = "sel restrict both";
 			modelrestr = "intramodel true intermodel true";
 		}
 		// "Between selection and all atoms"
 		else if (includeInteractions == 1) {
 			// Limit H-bond detection to H-bonds with at least one atom selected
-			atomspec = "selRestrict any";
+			atomspec = "sel restrict any";
 			modelrestr = "intramodel false intermodel true";
 		}
 		// "Within selection and all atoms"
 		else if (includeInteractions == 2) {
 			// Limit H-bond detection to H-bonds with at least one atom selected
-			atomspec = "selRestrict any";
+			atomspec = "sel restrict any";
 			modelrestr = "intramodel true intermodel true";
 		}
 		// "Between models"
@@ -248,7 +248,7 @@ public class RINManager {
 		// atomspec = "spec #*";
 		// modelrestr = "intramodel true intermodel true";
 		// }
-		String command = "findhbond " + atomspec + " " + modelrestr
+		String command = "hbond " + atomspec + " " + modelrestr
 				+ " makePseudobonds false log true namingStyle command";
 		if (relaxHBonds) {
 			command += " relax true distSlop " + distSlop + " angleSlop " + angleSlop;
